@@ -51,10 +51,15 @@ jobs:
         run: |
           set -e
           for src in ./sources/*; do
-            if [ -d "$src" ]; then
+            # Skip stray directories left over from cache restore (e.g. only a
+            # leftover target/ from a deleted source). A real source has Cargo.toml.
+            if [ -d "$src" ] && [ -f "$src/Cargo.toml" ]; then
               echo "::group::Building $src"
               (cd "$src" && aidoku package)
               echo "::endgroup::"
+            elif [ -d "$src" ]; then
+              echo "::warning::Skipping $src (no Cargo.toml — likely cache leftover)"
+              rm -rf "$src"
             fi
           done
 
