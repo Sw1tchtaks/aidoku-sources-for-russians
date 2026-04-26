@@ -64,10 +64,6 @@ pub struct SearchNode {
 	#[serde(default)]
 	pub titles: Vec<I18nTitle>,
 	#[serde(default)]
-	pub manga_status: Option<String>,
-	#[serde(default)]
-	pub manga_rating: Option<String>,
-	#[serde(default)]
 	pub cover: Option<Image>,
 }
 

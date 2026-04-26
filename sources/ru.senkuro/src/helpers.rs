@@ -3,13 +3,12 @@ use crate::models::{
 };
 use crate::settings::domain;
 use aidoku::imports::net::Request;
+use aidoku::prelude::println;
 use aidoku::{Result, alloc::String, error};
 use alloc::format;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use serde::de::DeserializeOwned;
-
-pub const PAGE_SIZE: usize = 30;
 
 const API_URL: &str = "https://api.senkuro.me/graphql";
 
@@ -25,27 +24,59 @@ pub fn base_url() -> String {
 pub fn apply_headers(request: Request) -> Request {
 	let base = base_url();
 	request
-		.header("User-Agent", "Aidoku/0.7 (Senkuro Source)")
+		.header(
+			"User-Agent",
+			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+		)
 		.header("Referer", base.as_str())
 		.header("Origin", base.as_str())
-		.header("Accept", "application/json")
+		.header("Accept", "*/*")
+		.header("Accept-Language", "ru,en;q=0.9")
 }
 
-fn post_graphql<T: DeserializeOwned>(body: &str) -> Result<T> {
-	let raw: GqlResponse<T> = apply_headers(
+fn post_graphql<T: DeserializeOwned>(operation: &str, body: &str) -> Result<T> {
+	let request = apply_headers(
 		Request::post(API_URL)?
 			.header("Content-Type", "application/json")
 			.body(body.as_bytes()),
-	)
-	.json_owned::<GqlResponse<T>>()?;
+	);
 
-	if let Some(errors) = raw.errors {
-		if let Some(first) = errors.into_iter().next() {
-			return Err(error!("Senkuro API error: {}", first.message));
-		}
+	let response = request.send()?;
+	let status = response.status_code();
+	let bytes = response.get_data()?;
+
+	if status < 200 || status >= 300 {
+		let preview = preview_body(&bytes);
+		println!("[senkuro:{operation}] HTTP {status}: {preview}");
+		return Err(error!("Senkuro {operation} HTTP {status}"));
 	}
 
-	raw.data.ok_or_else(|| error!("Senkuro API: empty data"))
+	let raw: GqlResponse<T> = match serde_json::from_slice(&bytes) {
+		Ok(v) => v,
+		Err(e) => {
+			let preview = preview_body(&bytes);
+			println!("[senkuro:{operation}] JSON parse error: {e}, body: {preview}");
+			return Err(error!("Senkuro {operation} parse error: {e}"));
+		}
+	};
+
+	if let Some(errors) = raw.errors {
+		let messages: Vec<String> = errors.into_iter().map(|e| e.message).collect();
+		let joined = messages.join("; ");
+		println!("[senkuro:{operation}] GraphQL errors: {joined}");
+		return Err(error!("Senkuro {operation}: {joined}"));
+	}
+
+	raw.data.ok_or_else(|| {
+		let preview = preview_body(&bytes);
+		println!("[senkuro:{operation}] empty data, body: {preview}");
+		error!("Senkuro {operation}: empty data")
+	})
+}
+
+fn preview_body(bytes: &[u8]) -> String {
+	let limit = bytes.len().min(400);
+	String::from_utf8_lossy(&bytes[..limit]).into_owned()
 }
 
 fn escape_json(input: &str) -> String {
@@ -70,11 +101,13 @@ pub fn search_mangas(query: &str) -> Result<Vec<SearchNode>> {
 		q = escape_json(query),
 		hash = SEARCH_HASH,
 	);
-	let data: SearchData = post_graphql(&body)?;
-	Ok(data
+	let data: SearchData = post_graphql("search", &body)?;
+	let nodes: Vec<SearchNode> = data
 		.search
 		.map(|c| c.edges.into_iter().filter_map(|e| e.node).collect())
-		.unwrap_or_default())
+		.unwrap_or_default();
+	println!("[senkuro:search] query={query:?} -> {} results", nodes.len());
+	Ok(nodes)
 }
 
 pub fn fetch_manga(slug: &str) -> Result<MangaNode> {
@@ -83,7 +116,7 @@ pub fn fetch_manga(slug: &str) -> Result<MangaNode> {
 		slug = escape_json(slug),
 		hash = FETCH_MANGA_HASH,
 	);
-	let data: MangaData = post_graphql(&body)?;
+	let data: MangaData = post_graphql("fetchManga", &body)?;
 	data.manga
 		.ok_or_else(|| error!("Manga \"{}\" not found", slug))
 }
@@ -98,7 +131,7 @@ pub fn fetch_manga_chapters(branch_id: &str, after: Option<&str>) -> Result<Chap
 		branch = escape_json(branch_id),
 		hash = FETCH_CHAPTERS_HASH,
 	);
-	post_graphql(&body)
+	post_graphql("fetchMangaChapters", &body)
 }
 
 pub fn fetch_chapter_pages(slug: &str) -> Result<ChapterPagesData> {
@@ -107,5 +140,5 @@ pub fn fetch_chapter_pages(slug: &str) -> Result<ChapterPagesData> {
 		slug = escape_json(slug),
 		hash = FETCH_CHAPTER_HASH,
 	);
-	post_graphql(&body)
+	post_graphql("fetchMangaChapter", &body)
 }
