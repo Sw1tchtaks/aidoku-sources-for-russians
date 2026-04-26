@@ -1,0 +1,20 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"footer": "Зеркало можно сменить, если основное возвращает 5xx или CAPTCHA. Дефолт — ranobes.com.",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://ranobes.com",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://ranobes.com",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]

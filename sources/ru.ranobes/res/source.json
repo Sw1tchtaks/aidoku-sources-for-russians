@@ -1,0 +1,13 @@
+{
+	"info": {
+		"id": "ru.ranobes",
+		"name": "Ranobes",
+		"version": 1,
+		"url": "https://ranobes.com",
+		"contentRating": 1,
+		"languages": ["ru"]
+	},
+	"listings": [
+		{"id": "popular", "name": "Каталог"}
+	]
+}
