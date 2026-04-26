@@ -1,0 +1,20 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"footer": "Зеркало надо менять, когда основное возвращает 5xx или CAPTCHA. Список рабочих доменов смотрите на форуме Grouple.",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://a.zazaza.me",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://a.zazaza.me",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]
