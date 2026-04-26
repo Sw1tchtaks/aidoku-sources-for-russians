@@ -9,14 +9,16 @@ mod settings;
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
-	Chapter, DeepLinkHandler, DeepLinkResult, DynamicFilters, Filter, FilterValue,
-	ImageRequestProvider, Manga, MangaPageResult, Page, PageContent, PageContext, Result, Source,
+	Chapter, DeepLinkHandler, DeepLinkResult, DynamicFilters, Filter, FilterValue, Home,
+	HomeComponent, HomeComponentValue, HomeLayout, ImageRequestProvider, Link, Listing,
+	ListingKind, ListingProvider, Manga, MangaPageResult, Page, PageContent, PageContext, Result,
+	Source,
 	alloc::{String, Vec},
 };
 use alloc::string::ToString;
 use core::marker::PhantomData;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use graphql::{
 	CHAPTERS_QUERY, DETAILS_QUERY, DetailsVariables, FILTERS_QUERY, FiltersDto, GqlRequest,
@@ -274,6 +276,116 @@ impl<C: Config> DeepLinkHandler for SenkuroEngine<C> {
 		Ok(Some(DeepLinkResult::Manga {
 			key: alloc::format!(",,{}", slug),
 		}))
+	}
+}
+
+impl<C: Config> SenkuroEngine<C> {
+	/// Build a search request with at most a single type filter applied, plus the
+	/// per-source default rating include / genre exclude. Used by both
+	/// [`ListingProvider`] tabs and the home layout sections.
+	fn fetch_catalog(type_slug: Option<&'static str>, page: i32) -> Result<MangaPageResult> {
+		let mut kind = FiltersDto::default();
+		if let Some(t) = type_slug {
+			kind.include.push(t.to_string());
+		}
+
+		let mut rating = FiltersDto::default();
+		for r in C::DEFAULT_RATING_INCLUDE {
+			let slug: &str = r;
+			rating.include.push(slug.to_string());
+		}
+
+		let mut label = FiltersDto::default();
+		for g in C::EXCLUDE_GENRES {
+			let slug: &str = g;
+			label.exclude.push(slug.to_string());
+		}
+
+		let vars = SearchVariables {
+			query: None,
+			kind: kind.into_option(),
+			status: None,
+			translation_status: None,
+			label: label.into_option(),
+			format: None,
+			rating: rating.into_option(),
+			offset: Some(OFFSET_COUNT * (page - 1).max(0)),
+		};
+		let body = serde_json::to_vec(&GqlRequest {
+			query: SEARCH_QUERY,
+			variables: vars,
+		})
+		.map_err(|e| error!("encode catalog: {e}"))?;
+		let data: SearchData = post_graphql("searchTachiyomiManga", &body)?;
+		let mangas = data
+			.manga_tachiyomi_search
+			.map(|p| p.mangas)
+			.unwrap_or_default();
+		let has_next_page = mangas.len() as i32 >= OFFSET_COUNT;
+		let entries: Vec<Manga> = mangas.into_iter().map(|m| m.into_manga(C::BASE_URL)).collect();
+		Ok(MangaPageResult {
+			entries,
+			has_next_page,
+		})
+	}
+}
+
+const TYPE_SECTIONS: &[(&str, &str, Option<&str>)] = &[
+	// (listing_id, display_title, optional type-filter slug)
+	("manga", "Манга", Some("MANGA")),
+	("manhwa", "Манхва", Some("MANHWA")),
+	("manhua", "Маньхуа", Some("MANHUA")),
+	("comics", "Комиксы", Some("COMICS")),
+];
+
+impl<C: Config> ListingProvider for SenkuroEngine<C> {
+	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
+		let id = listing.id.as_str();
+		if id == "popular" || id.is_empty() {
+			return Self::fetch_catalog(None, page);
+		}
+		let type_slug = TYPE_SECTIONS
+			.iter()
+			.find(|(lid, _, _)| *lid == id)
+			.and_then(|(_, _, slug)| *slug);
+		Self::fetch_catalog(type_slug, page)
+	}
+}
+
+impl<C: Config> Home for SenkuroEngine<C> {
+	fn get_home(&self) -> Result<HomeLayout> {
+		let popular = Self::fetch_catalog(None, 1)?.entries;
+		let mut components: Vec<HomeComponent> = Vec::with_capacity(1 + TYPE_SECTIONS.len());
+		components.push(HomeComponent {
+			title: Some("Популярное".to_string()),
+			subtitle: None,
+			value: HomeComponentValue::BigScroller {
+				entries: popular,
+				auto_scroll_interval: Some(8.0),
+			},
+		});
+		for (lid, title, type_slug) in TYPE_SECTIONS {
+			let entries = Self::fetch_catalog(*type_slug, 1)
+				.map(|r| r.entries)
+				.unwrap_or_default();
+			if entries.is_empty() {
+				continue;
+			}
+			let links: Vec<Link> = entries.into_iter().map(Link::from).collect();
+			components.push(HomeComponent {
+				title: Some((*title).to_string()),
+				subtitle: None,
+				value: HomeComponentValue::Scroller {
+					entries: links,
+					listing: Some(Listing {
+						id: (*lid).to_string(),
+						name: (*title).to_string(),
+						kind: ListingKind::Default,
+					}),
+				},
+			});
+		}
+		Ok(HomeLayout { components })
 	}
 }
 

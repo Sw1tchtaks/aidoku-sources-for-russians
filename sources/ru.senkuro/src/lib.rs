@@ -2,7 +2,9 @@
 extern crate alloc;
 
 use aidoku::prelude::*;
-use aidoku::{DeepLinkHandler, DynamicFilters, ImageRequestProvider, Source};
+use aidoku::{
+	DeepLinkHandler, DynamicFilters, Home, ImageRequestProvider, ListingProvider, Source,
+};
 use senkuro::{Config, SenkuroEngine};
 
 struct RuSenkuro;
@@ -17,6 +19,8 @@ impl Config for RuSenkuro {
 
 register_source!(
 	SenkuroEngine<RuSenkuro>,
+	ListingProvider,
+	Home,
 	DynamicFilters,
 	DeepLinkHandler,
 	ImageRequestProvider

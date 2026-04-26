@@ -2,9 +2,16 @@
 	"info": {
 		"id": "ru.senkuro",
 		"name": "Senkuro",
-		"version": 4,
+		"version": 5,
 		"url": "https://senkuro.com",
 		"contentRating": 1,
 		"languages": ["ru"]
-	}
+	},
+	"listings": [
+		{"id": "popular", "name": "Популярное"},
+		{"id": "manga", "name": "Манга"},
+		{"id": "manhwa", "name": "Манхва"},
+		{"id": "manhua", "name": "Маньхуа"},
+		{"id": "comics", "name": "Комиксы"}
+	]
 }
