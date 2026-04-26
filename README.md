@@ -1,6 +1,6 @@
 # Aidoku Sources for Russians
 
-Источники для [Aidoku](https://aidoku.app) (iOS/iPadOS, версия 0.7+) для русскоязычных сайтов с мангой.
+Источники для [Aidoku](https://aidoku.app) (iOS/iPadOS, версия 0.7+) для русскоязычных сайтов с мангой и ранобэ.
 
 ## Использование
 
@@ -12,18 +12,43 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 
 После этого источники появятся в списке доступных и их можно установить.
 
+> Aidoku кеширует индекс на стороне приложения и иногда системно через iOS URLSession. Если после моего пуша новые источники не появляются — удалите URL из Source Lists, форс-закройте Aidoku (свайп вверх в переключателе задач) и добавьте URL заново.
+
 ## Источники
 
-| Источник | Сайт | Статус | Содержимое |
-|----------|------|--------|------------|
-| Senkuro | https://senkuro.com | работает | манга, манхва, комиксы |
-| Senkognito | https://senkognito.com | работает | 18+ |
-| ReadManga | https://readmanga.live | планируется | манга |
-| MintManga | https://mintmanga.live | планируется | манга |
-| SelfManga | https://selfmanga.live | планируется | манга |
-| AllHentai | https://allhen.online | работает | 18+ |
-| Acomics | https://acomics.ru | планируется | комиксы |
-| MangaBuff | https://mangabuff.ru | планируется | манга |
+| Источник | Сайт | Версия | Статус | Содержимое |
+|----------|------|:---:|--------|------------|
+| [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v5 | работает | манга, манхва, комиксы |
+| [Senkognito](sources/ru.senkognito/) | https://senkognito.com | v5 | работает | 18+ |
+| [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v1 | beta | манга (Grouple) |
+| [MintManga](sources/ru.mintmanga/) | https://mintmanga.live | v1 | beta | манга (Grouple) |
+| [SelfManga](sources/ru.selfmanga/) | https://selfmanga.live | v1 | beta | манга (Grouple) |
+| [AllHentai](sources/ru.allhentai/) | https://allhen.online | v1 | beta | 18+ (Grouple) |
+| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v2 | работает | ранобэ (текст) |
+| Acomics | https://acomics.ru | — | планируется | комиксы |
+| MangaBuff | https://mangabuff.ru | — | планируется | манга |
+| RanobeHub | https://ranobehub.org | — | планируется | ранобэ (текст) |
+
+**Beta** означает, что источник собирается и устанавливается, но полевая обкатка ещё не закончена. Если что-то не работает — заведите [issue](https://github.com/Sw1tchtaks/aidoku-sources-for-russians/issues).
+
+### Возможности по семействам
+
+- **Senkuro / Senkognito** — общий GraphQL-движок (`templates/senkuro`):
+  - Главная-вид с большой каруселью «Популярное» + ленты по типу контента (Манга / Манхва / Маньхуа / Комиксы)
+  - Динамические фильтры жанров (~1100 меток, подгружаются с API при первом открытии каталога) сгруппированы по разделам Демография / Темы / Сеттинг / Черты / Элементы
+  - Статические фильтры тип / формат / статус / статус перевода / возрастной рейтинг
+  - Пагинация каталога 10/страницу (хардкод сервера)
+  - Senkognito по умолчанию подмешивает `rating include EXPLICIT`, поэтому каталог реально показывает 18+ контент, а не дубль Senkuro
+  - Веб-логин не реализован: API анонимный, для бесплатных тайтлов работает без аккаунта
+- **Grouple-семейство** (ReadManga / MintManga / SelfManga / AllHentai) — общий HTML-парсер (`templates/grouple`):
+  - Каталог + поиск
+  - Современный (`.cr-*`) и легаси (`.expandable`) layout карточек
+  - Извлечение страниц чтения из `rm_h.readerInit(...)` JS-массива
+  - Зеркало настраивается в Settings источника
+  - Платные/лицензированные главы и WebView-логин в v1 не поддерживаются
+- **Ranobes** — текстовый источник:
+  - Главы возвращаются как `PageContent::Text(markdown)` и рендерятся в вертикальном тексто-ридере
+  - Список глав парсится постранично, до ~1250 глав за refresh
 
 ## Что есть в официальном репозитории
 
@@ -32,16 +57,19 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 - **MangaLib** (`ru.mangalib`)
 - **HentaiLib** (`ru.hentailib`)
 - **Desu** (`ru.desu`)
+- **RanobeLib** (`ru.ranobelib`) — для ранобэ через LibGroup
+- **SlashLib** (`ru.slashlib`)
 
 ## Разработка
 
 Каждый источник — Rust-крейт под `wasm32-unknown-unknown` через [aidoku-rs](https://github.com/Aidoku/aidoku-rs). Логика, общая для нескольких сайтов одного движка, вынесена в `templates/<engine>`:
 
-- `templates/senkuro` — GraphQL-движок Senkuro/Senkognito.
+- `templates/senkuro` — GraphQL-движок Senkuro / Senkognito
+- `templates/grouple` — HTML-парсер ReadManga-family
 
-Сборка автоматическая в CI (`.github/workflows/build.yaml`) при пуше в `main`:
+Сборка автоматическая в CI (`.github/workflows/build.yaml`) при пуше в `main` или `templates/`:
 
-1. `aidoku package` собирает `.aix` для каждого источника
+1. `aidoku package` собирает `.aix` для каждого источника в `sources/`
 2. `aidoku build` агрегирует их в `index.min.json`
 3. Результат деплоится в ветку `gh-pages` и публикуется через GitHub Pages
 
@@ -58,10 +86,16 @@ cd sources/ru.senkuro && aidoku package
 ```
 .
 ├── templates/             # переиспользуемые движки (path-зависимости)
-│   └── senkuro/           # GraphQL Senkuro / Senkognito
+│   ├── senkuro/           # GraphQL Senkuro / Senkognito
+│   └── grouple/           # HTML ReadManga / MintManga / SelfManga / AllHentai
 └── sources/               # сами источники, каждый собирается в .aix
     ├── ru.senkuro/
-    └── ru.senkognito/
+    ├── ru.senkognito/
+    ├── ru.readmanga/
+    ├── ru.mintmanga/
+    ├── ru.selfmanga/
+    ├── ru.allhentai/
+    └── ru.ranobes/
 ```
 
 ## Лицензия
