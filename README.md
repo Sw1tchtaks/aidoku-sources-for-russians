@@ -21,10 +21,9 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 | ReadManga | https://readmanga.live | планируется | манга |
 | MintManga | https://mintmanga.live | планируется | манга |
 | SelfManga | https://selfmanga.live | планируется | манга |
-| AllHentai | https://allhen.online | планируется | 18+ |
+| AllHentai | https://allhen.online | работает | 18+ |
 | Acomics | https://acomics.ru | планируется | комиксы |
 | MangaBuff | https://mangabuff.ru | планируется | манга |
-| Remanga | https://remanga.org | планируется | манга |
 
 ## Что есть в официальном репозитории
 
