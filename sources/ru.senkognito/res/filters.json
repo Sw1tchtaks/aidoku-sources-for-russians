@@ -98,12 +98,14 @@
 		"options": [
 			"0+",
 			"12+",
-			"16+"
+			"16+",
+			"18+"
 		],
 		"ids": [
 			"GENERAL",
 			"SENSITIVE",
-			"QUESTIONABLE"
+			"QUESTIONABLE",
+			"EXPLICIT"
 		]
 	}
 ]

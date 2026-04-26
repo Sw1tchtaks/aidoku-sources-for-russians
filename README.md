@@ -1,6 +1,6 @@
 # Aidoku Sources for Russians
 
-Источники для [Aidoku](https://aidoku.app) (iOS/iPadOS, версия 0.7+) для русскоязычных сайтов с мангой, отсутствующих в [официальном community-репозитории](https://github.com/Aidoku-Community/sources).
+Источники для [Aidoku](https://aidoku.app) (iOS/iPadOS, версия 0.7+) для русскоязычных сайтов с мангой.
 
 ## Использование
 
@@ -10,36 +10,59 @@
 https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 ```
 
-После этого источник появится в списке доступных и его можно установить.
+После этого источники появятся в списке доступных и их можно установить.
 
 ## Источники
 
-| Источник | Сайт | Статус |
-|----------|------|--------|
-| Senkuro | https://senkuro.com | бета |
-| Remanga | https://remanga.org | планируется |
+| Источник | Сайт | Статус | Содержимое |
+|----------|------|--------|------------|
+| Senkuro | https://senkuro.com | работает | манга, манхва, комиксы |
+| Senkognito | https://senkognito.com | работает | 18+ |
+| ReadManga | https://readmanga.live | планируется | манга |
+| MintManga | https://mintmanga.live | планируется | манга |
+| SelfManga | https://selfmanga.live | планируется | манга |
+| AllHentai | https://allhen.online | планируется | 18+ |
+| Acomics | https://acomics.ru | планируется | комиксы |
+| MangaBuff | https://mangabuff.ru | планируется | манга |
+| Remanga | https://remanga.org | планируется | манга |
 
-## Известные ограничения (Senkuro v0.1)
+## Что есть в официальном репозитории
 
-- Нет каталога/фильтров/сортировки. На главной показывается результат поиска по букве «а» — пока пустой запрос.
-- Нет тегов/жанров в фильтрах поиска (только текстовый поиск).
-- Главы берутся из основной (RU primary) ветки. Альтернативные команды переводчиков пока не выбираются.
-- Если CDN или GraphQL persisted-query hash изменится у Senkuro, источник может перестать работать до обновления.
+Эти источники не дублируем — берите из [aidoku-community/sources](https://github.com/Aidoku-Community/sources):
+
+- **MangaLib** (`ru.mangalib`)
+- **HentaiLib** (`ru.hentailib`)
+- **Desu** (`ru.desu`)
 
 ## Разработка
 
-Каждый источник — отдельный Rust-крейт под `wasm32-unknown-unknown` через [aidoku-rs](https://github.com/Aidoku/aidoku-rs). Сборка происходит автоматически в CI (`.github/workflows/build.yaml`) при пуше в `main`:
+Каждый источник — Rust-крейт под `wasm32-unknown-unknown` через [aidoku-rs](https://github.com/Aidoku/aidoku-rs). Логика, общая для нескольких сайтов одного движка, вынесена в `templates/<engine>`:
+
+- `templates/senkuro` — GraphQL-движок Senkuro/Senkognito.
+
+Сборка автоматическая в CI (`.github/workflows/build.yaml`) при пуше в `main`:
 
 1. `aidoku package` собирает `.aix` для каждого источника
 2. `aidoku build` агрегирует их в `index.min.json`
 3. Результат деплоится в ветку `gh-pages` и публикуется через GitHub Pages
 
-Локально (если хочется собирать руками):
+Локально:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo install --git https://github.com/Aidoku/aidoku-rs aidoku-cli
 cd sources/ru.senkuro && aidoku package
+```
+
+## Структура репозитория
+
+```
+.
+├── templates/             # переиспользуемые движки (path-зависимости)
+│   └── senkuro/           # GraphQL Senkuro / Senkognito
+└── sources/               # сами источники, каждый собирается в .aix
+    ├── ru.senkuro/
+    └── ru.senkognito/
 ```
 
 ## Лицензия
