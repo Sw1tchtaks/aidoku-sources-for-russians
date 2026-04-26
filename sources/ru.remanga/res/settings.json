@@ -1,0 +1,28 @@
+[
+	{
+		"type": "group",
+		"title": "Аккаунт",
+		"footer": "Войдите через WebView, чтобы получить доступ к платным главам и закладкам. После входа токен сохраняется и подставляется в заголовок Authorization автоматически.",
+		"items": [
+			{
+				"type": "login",
+				"key": "login",
+				"notification": "token.changed",
+				"method": "web",
+				"url": "https://remanga.org/login",
+				"title": "Войти на Ремангу",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "authToken",
+				"title": "Auth Token (опционально)",
+				"subtitle": "Если веб-логин не подцепил токен, можно вставить его руками: DevTools → Application → Cookies → user → access_token.",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
+				"refreshes": ["content"]
+			}
+		]
+	}
+]
