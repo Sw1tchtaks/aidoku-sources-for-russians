@@ -1,0 +1,96 @@
+name: Build sources
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "sources/**"
+      - ".github/workflows/build.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin
+            sources/**/target/
+          key: ${{ runner.os }}-cargo1-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo1-
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install aidoku-cli
+        run: |
+          if ! command -v aidoku >/dev/null 2>&1; then
+            cargo install --git https://github.com/Aidoku/aidoku-rs aidoku-cli
+          fi
+
+      - name: Build sources
+        run: |
+          set -e
+          for src in ./sources/*; do
+            if [ -d "$src" ]; then
+              echo "::group::Building $src"
+              (cd "$src" && aidoku package)
+              echo "::endgroup::"
+            fi
+          done
+
+      - name: Build source list
+        run: |
+          mkdir -p public
+          aidoku build sources/*/package.aix --name "Aidoku Sources for Russians"
+
+      - name: Copy landing page
+        run: |
+          if [ -f public-template/index.html ]; then
+            cp public-template/index.html public/index.html
+          fi
+
+      - name: Upload built packages as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: packages
+          path: public/sources/*.aix
+          if-no-files-found: ignore
+
+      - name: Upload site as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: site
+          path: public
+          if-no-files-found: ignore
+
+      - name: Deploy to GitHub Pages
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: public
+          git-config-name: GitHub Actions
+          git-config-email: github-actions[bot]@users.noreply.github.com
+          commit-message: Update source list
+          single-commit: true

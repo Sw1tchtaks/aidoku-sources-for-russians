@@ -1,0 +1,12 @@
+{
+	"info": {
+		"id": "ru.senkuro",
+		"name": "Senkuro",
+		"version": 1,
+		"url": "https://senkuro.com",
+		"contentRating": 1,
+		"languages": [
+			"ru"
+		]
+	}
+}

@@ -1,0 +1,6 @@
+target/
+public/
+**/package.aix
+.DS_Store
+*.log
+_reference/

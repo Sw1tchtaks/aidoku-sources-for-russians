@@ -1,0 +1,32 @@
+[
+	{
+		"type": "group",
+		"title": "Settings",
+		"items": [
+			{
+				"type": "text",
+				"key": "domain",
+				"title": "Домен",
+				"default": "senkuro.com",
+				"refreshes": ["content"],
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true
+			},
+			{
+				"type": "switch",
+				"key": "englishTitles",
+				"title": "Английские заголовки",
+				"default": false,
+				"refreshes": ["content"]
+			},
+			{
+				"type": "switch",
+				"key": "originalQuality",
+				"title": "Изображения в оригинальном качестве",
+				"subtitle": "Выкл.: сжатые версии (быстрее, меньше трафика)",
+				"default": false
+			}
+		]
+	}
+]
