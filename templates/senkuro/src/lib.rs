@@ -39,6 +39,11 @@ pub trait Config: 'static {
 	/// Genre slugs that should always be excluded server-side. Applied by Senkuro to
 	/// hide adult tags; Senkognito leaves this empty.
 	const EXCLUDE_GENRES: &'static [&'static str] = &[];
+	/// Age-rating slugs that should always be included by default in catalog/search
+	/// requests (when the user hasn't picked any rating filter). Senkognito sets this
+	/// to ["EXPLICIT", "QUESTIONABLE"] so the catalog actually shows the adult content
+	/// the site is for; Senkuro leaves it empty so the API serves its default safe set.
+	const DEFAULT_RATING_INCLUDE: &'static [&'static str] = &[];
 }
 
 pub struct SenkuroEngine<C: Config>(PhantomData<C>);
@@ -118,6 +123,18 @@ impl<C: Config> Source for SenkuroEngine<C> {
 			let slug: &str = g;
 			if !label.exclude.iter().any(|x| x.as_str() == slug) {
 				label.exclude.push(slug.to_string());
+			}
+		}
+
+		// Senkognito's permanent 18+ include — only kicks in when the user
+		// hasn't already picked an explicit rating filter, otherwise the
+		// user's choice wins.
+		if rating.include.is_empty() && rating.exclude.is_empty() {
+			for r in C::DEFAULT_RATING_INCLUDE {
+				let slug: &str = r;
+				if !rating.include.iter().any(|x| x.as_str() == slug) {
+					rating.include.push(slug.to_string());
+				}
 			}
 		}
 
