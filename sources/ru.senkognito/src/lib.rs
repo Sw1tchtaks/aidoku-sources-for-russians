@@ -14,10 +14,11 @@ impl Config for RuSenkognito {
 	const BASE_URL: &'static str = "https://senkognito.com";
 	// Senkognito is the adult-content twin of Senkuro; no genre filtering.
 	const EXCLUDE_GENRES: &'static [&'static str] = &[];
-	// Default to EXPLICIT+QUESTIONABLE so the catalog actually shows adult content
-	// the site is built for. Without this, the API returns the same safe-by-default
-	// set as Senkuro.
-	const DEFAULT_RATING_INCLUDE: &'static [&'static str] = &["EXPLICIT", "QUESTIONABLE"];
+	// Default to EXPLICIT only — Senkuro's API treats QUESTIONABLE as just another
+	// safe tier (returns the same default popular set), so adding it would silently
+	// cancel the NSFW filtering. Empirically, only `include: [EXPLICIT]` produces
+	// the adult-focused catalog Senkognito users expect.
+	const DEFAULT_RATING_INCLUDE: &'static [&'static str] = &["EXPLICIT"];
 }
 
 register_source!(
