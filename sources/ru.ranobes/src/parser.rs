@@ -4,18 +4,29 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-/// Parse a single tile from the catalog page (`div.block.story.shortstory`).
+/// Parse a single tile from the catalog page (`.block.story.shortstory`).
+/// Tile is an `<article>` (not `<div>`) wrapping `h2.title > a` (title) and
+/// `figure.cover` (cover via inline `background-image: url(...)`).
 pub fn parse_tile(el: &Element) -> Option<Manga> {
-	// Title link is the *.title small > a inside the tile.
 	let link = el
-		.select_first("a.title")
+		.select_first("h2.title a")
 		.or_else(|| el.select_first(".title a"))?;
 	let href = link.attr("abs:href").or_else(|| link.attr("href"))?;
-	let title = link.attr("title").unwrap_or_else(|| link.text().unwrap_or_default());
+	let title = link
+		.text()
+		.filter(|s| !s.is_empty())
+		.or_else(|| link.attr("title"))
+		.unwrap_or_default();
 	let key = url_to_manga_key(&href)?;
 	let cover = el
-		.select_first("img")
-		.and_then(|img| img.attr("abs:src").or_else(|| img.attr("src")))
+		.select_first("figure.cover")
+		.and_then(|fig| fig.attr("style"))
+		.as_deref()
+		.and_then(extract_background_image)
+		.or_else(|| {
+			el.select_first("img")
+				.and_then(|img| img.attr("abs:src").or_else(|| img.attr("src")))
+		})
 		.filter(|s| !s.is_empty());
 	Some(Manga {
 		key,
@@ -24,6 +35,22 @@ pub fn parse_tile(el: &Element) -> Option<Manga> {
 		url: Some(href),
 		..Default::default()
 	})
+}
+
+/// Pull the URL out of a CSS `background-image: url(...)` declaration.
+fn extract_background_image(style: &str) -> Option<String> {
+	let needle = "url(";
+	let start = style.find(needle)? + needle.len();
+	let rest = &style[start..];
+	let end = rest.find(')')?;
+	let mut url = rest[..end].trim().to_string();
+	// Strip optional surrounding quotes.
+	if (url.starts_with('"') && url.ends_with('"'))
+		|| (url.starts_with('\'') && url.ends_with('\''))
+	{
+		url = url[1..url.len() - 1].to_string();
+	}
+	if url.is_empty() { None } else { Some(url) }
 }
 
 /// Convert a manga URL like `https://ranobes.com/ranobe/12345-some-slug.html`
