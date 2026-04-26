@@ -2,7 +2,7 @@
 	"info": {
 		"id": "ru.senkognito",
 		"name": "Senkognito",
-		"version": 2,
+		"version": 3,
 		"url": "https://senkognito.com",
 		"contentRating": 2,
 		"languages": ["ru"]

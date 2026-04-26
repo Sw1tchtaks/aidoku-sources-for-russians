@@ -4,6 +4,38 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use serde::Deserialize;
 
+// --- filters (mangaTachiyomiSearchFilters) ---
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiltersResponse {
+	pub manga_tachiyomi_search_filters: Option<FiltersPayload>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct FiltersPayload {
+	#[serde(default)]
+	pub labels: Vec<LabelDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelDto {
+	#[serde(default)]
+	pub id: Option<String>,
+	#[serde(default)]
+	pub root_id: Option<String>,
+	pub slug: String,
+	#[serde(default)]
+	pub titles: Vec<I18nString>,
+}
+
+impl LabelDto {
+	pub fn display_name(&self) -> String {
+		pick_label_title(&self.titles).unwrap_or_else(|| self.slug.clone())
+	}
+}
+
 #[derive(Deserialize)]
 pub struct GqlResponse<T> {
 	pub data: Option<T>,
@@ -363,7 +395,7 @@ fn pick_title(titles: &[I18nString], original: Option<&str>, fallback: &str) -> 
 		.unwrap_or_else(|| fallback.to_string())
 }
 
-fn pick_label_title(titles: &[I18nString]) -> Option<String> {
+pub fn pick_label_title(titles: &[I18nString]) -> Option<String> {
 	let prefer_en = prefer_english_titles();
 	let primary = if prefer_en { "EN" } else { "RU" };
 	titles

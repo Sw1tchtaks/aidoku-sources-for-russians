@@ -2,7 +2,7 @@
 extern crate alloc;
 
 use aidoku::prelude::*;
-use aidoku::{DeepLinkHandler, ImageRequestProvider, Source};
+use aidoku::{DeepLinkHandler, DynamicFilters, ImageRequestProvider, Source};
 use senkuro::{Config, SenkuroEngine};
 
 struct RuSenkuro;
@@ -15,4 +15,9 @@ impl Config for RuSenkuro {
 		&["hentai", "yaoi", "yuri", "shoujo_ai", "shounen_ai", "lgbt"];
 }
 
-register_source!(SenkuroEngine<RuSenkuro>, DeepLinkHandler, ImageRequestProvider);
+register_source!(
+	SenkuroEngine<RuSenkuro>,
+	DynamicFilters,
+	DeepLinkHandler,
+	ImageRequestProvider
+);

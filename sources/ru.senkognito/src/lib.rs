@@ -2,7 +2,7 @@
 extern crate alloc;
 
 use aidoku::prelude::*;
-use aidoku::{DeepLinkHandler, ImageRequestProvider, Source};
+use aidoku::{DeepLinkHandler, DynamicFilters, ImageRequestProvider, Source};
 use senkuro::{Config, SenkuroEngine};
 
 struct RuSenkognito;
@@ -18,4 +18,9 @@ impl Config for RuSenkognito {
 	const DEFAULT_RATING_INCLUDE: &'static [&'static str] = &["EXPLICIT", "QUESTIONABLE"];
 }
 
-register_source!(SenkuroEngine<RuSenkognito>, DeepLinkHandler, ImageRequestProvider);
+register_source!(
+	SenkuroEngine<RuSenkognito>,
+	DynamicFilters,
+	DeepLinkHandler,
+	ImageRequestProvider
+);

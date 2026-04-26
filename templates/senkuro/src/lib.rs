@@ -1,6 +1,7 @@
 #![no_std]
 extern crate alloc;
 
+mod filters;
 mod graphql;
 mod models;
 mod settings;
@@ -8,21 +9,22 @@ mod settings;
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
-	Chapter, DeepLinkHandler, DeepLinkResult, FilterValue, ImageRequestProvider, Manga,
-	MangaPageResult, Page, PageContent, PageContext, Result, Source,
+	Chapter, DeepLinkHandler, DeepLinkResult, DynamicFilters, Filter, FilterValue,
+	ImageRequestProvider, Manga, MangaPageResult, Page, PageContent, PageContext, Result, Source,
 	alloc::{String, Vec},
 };
 use alloc::string::ToString;
 use core::marker::PhantomData;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use graphql::{
-	CHAPTERS_QUERY, DETAILS_QUERY, DetailsVariables, FiltersDto, GqlRequest, OFFSET_COUNT,
-	PAGES_QUERY, PagesVariables, SEARCH_QUERY, SearchVariables,
+	CHAPTERS_QUERY, DETAILS_QUERY, DetailsVariables, FILTERS_QUERY, FiltersDto, GqlRequest,
+	OFFSET_COUNT, PAGES_QUERY, PagesVariables, SEARCH_QUERY, SearchVariables,
 };
 use models::{
-	ChaptersData, DetailsData, GqlResponse, PagesData, SearchData, build_manga_key,
-	split_chapter_key, split_manga_key,
+	ChaptersData, DetailsData, FiltersResponse, GqlResponse, PagesData, SearchData,
+	build_manga_key, split_chapter_key, split_manga_key,
 };
 
 /// Per-source compile-time configuration consumed by [`SenkuroEngine`].
@@ -79,33 +81,37 @@ impl<C: Config> Source for SenkuroEngine<C> {
 					id,
 					included,
 					excluded,
-				} => match id.as_str() {
-					"type" => {
-						kind.include.extend(included);
-						kind.exclude.extend(excluded);
-					}
-					"format" => {
-						format.include.extend(included);
-						format.exclude.extend(excluded);
-					}
-					"status" => {
-						status.include.extend(included);
-						status.exclude.extend(excluded);
-					}
-					"translationStatus" => {
-						translation_status.include.extend(included);
-						translation_status.exclude.extend(excluded);
-					}
-					"rating" => {
-						rating.include.extend(included);
-						rating.exclude.extend(excluded);
-					}
-					"label" => {
+				} => {
+					if id.starts_with("label") {
+						// Genre groups: dynamic filter ids look like "label_TEFCRUw6NQ".
 						label.include.extend(included);
 						label.exclude.extend(excluded);
+					} else {
+						match id.as_str() {
+							"type" => {
+								kind.include.extend(included);
+								kind.exclude.extend(excluded);
+							}
+							"format" => {
+								format.include.extend(included);
+								format.exclude.extend(excluded);
+							}
+							"status" => {
+								status.include.extend(included);
+								status.exclude.extend(excluded);
+							}
+							"translationStatus" => {
+								translation_status.include.extend(included);
+								translation_status.exclude.extend(excluded);
+							}
+							"rating" => {
+								rating.include.extend(included);
+								rating.exclude.extend(excluded);
+							}
+							_ => {}
+						}
 					}
-					_ => {}
-				},
+				}
 				FilterValue::Select { id, value } => match id.as_str() {
 					"type" => kind.include.push(value),
 					"format" => format.include.push(value),
@@ -268,6 +274,35 @@ impl<C: Config> DeepLinkHandler for SenkuroEngine<C> {
 		Ok(Some(DeepLinkResult::Manga {
 			key: alloc::format!(",,{}", slug),
 		}))
+	}
+}
+
+impl<C: Config> DynamicFilters for SenkuroEngine<C> {
+	fn get_dynamic_filters(&self) -> Result<Vec<Filter>> {
+		// Static fixed-enum filters first.
+		let mut out = filters::static_filters();
+
+		// Then a multi-select per Senkuro genre root group, populated from the API.
+		#[derive(Serialize)]
+		struct EmptyVars {}
+		let body = serde_json::to_vec(&GqlRequest {
+			query: FILTERS_QUERY,
+			variables: EmptyVars {},
+		})
+		.map_err(|e| error!("encode filters: {e}"))?;
+		match post_graphql::<FiltersResponse>("fetchTachiyomiSearchFilters", &body) {
+			Ok(resp) => {
+				let labels = resp
+					.manga_tachiyomi_search_filters
+					.map(|p| p.labels)
+					.unwrap_or_default();
+				out.extend(filters::dynamic_genre_filters(&labels, C::EXCLUDE_GENRES));
+			}
+			Err(e) => {
+				println!("[senkuro] dynamic filters fetch failed, returning static only: {e:?}");
+			}
+		}
+		Ok(out)
 	}
 }
 

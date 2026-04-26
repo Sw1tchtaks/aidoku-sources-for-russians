@@ -14,7 +14,13 @@ pub const CHAPTERS_QUERY: &str = r#"query fetchTachiyomiChapters($mangaId: ID!) 
 
 pub const PAGES_QUERY: &str = r#"query fetchTachiyomiChapterPages($mangaId: ID!, $chapterId: ID!) { mangaTachiyomiChapterPages(mangaId: $mangaId, chapterId: $chapterId) { pages { url } } }"#;
 
-pub const OFFSET_COUNT: i32 = 20;
+pub const FILTERS_QUERY: &str = r#"query fetchTachiyomiSearchFilters { mangaTachiyomiSearchFilters { labels { id rootId slug titles { lang content } } } }"#;
+
+// Senkuro's `mangaTachiyomiSearch` resolver hardcodes 10 items per page on
+// the server side and rejects any `take`/`limit`/`count`/`first` argument.
+// Pagination has to step by exactly this number, otherwise we either skip
+// content (>10) or repeat it (<10).
+pub const OFFSET_COUNT: i32 = 10;
 
 #[derive(Serialize)]
 pub struct GqlRequest<'a, V: Serialize> {
