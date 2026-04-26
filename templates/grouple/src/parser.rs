@@ -335,11 +335,6 @@ pub fn parse_chapter_row(
 	let mut name = link.text().unwrap_or_default();
 	name = name.trim_end_matches(" \u{043d}\u{043e}\u{0432}\u{043e}\u{0435}").trim().to_string();
 
-	// Strip leading manga title words to clean up redundant chapter names.
-	if manga_key.len() > 25 {
-		// no-op without manga title — Aidoku passes Manga, but template doesn't have the name handy
-	}
-
 	let date_uploaded = el
 		.select("td.d-none")
 		.and_then(|list| list.last())
