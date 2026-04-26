@@ -1,0 +1,20 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"footer": "Зеркало надо менять, когда основное возвращает 5xx или CAPTCHA. Часть тайтлов и платные главы могут просить вход в WebView — эта версия источника логин не делает.",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://2.mintmanga.one",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://2.mintmanga.one",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]

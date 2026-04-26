@@ -1,0 +1,19 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://1.selfmanga.live",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://1.selfmanga.live",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]

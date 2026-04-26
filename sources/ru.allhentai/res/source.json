@@ -1,0 +1,15 @@
+{
+	"info": {
+		"id": "ru.allhentai",
+		"name": "AllHentai",
+		"version": 1,
+		"url": "https://allhen.online",
+		"contentRating": 2,
+		"languages": ["ru"]
+	},
+	"listings": [
+		{"id": "popular", "name": "Популярное"},
+		{"id": "latest", "name": "Последние обновления"},
+		{"id": "new", "name": "Новинки"}
+	]
+}

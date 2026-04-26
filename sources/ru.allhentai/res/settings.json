@@ -1,0 +1,20 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"footer": "Зеркало AllHentai регулярно меняется. Если каталог отдаёт 403/CAPTCHA — поменяйте домен здесь.",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://20.allhen.online",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://20.allhen.online",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]
