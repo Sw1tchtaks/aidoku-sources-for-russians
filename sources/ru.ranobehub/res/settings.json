@@ -1,0 +1,16 @@
+[
+	{
+		"type": "group",
+		"title": "Настройки",
+		"items": [
+			{
+				"type": "switch",
+				"key": "preferEnglishTitles",
+				"title": "Английские названия",
+				"subtitle": "Показывать английские варианты названий вместо русских",
+				"default": false,
+				"refreshes": ["content"]
+			}
+		]
+	}
+]
