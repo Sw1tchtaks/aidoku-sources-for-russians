@@ -6,6 +6,7 @@ mod graphql;
 mod models;
 mod settings;
 
+use aidoku::imports::defaults::{DefaultValue, defaults_get, defaults_set};
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
@@ -22,10 +23,10 @@ use serde::de::DeserializeOwned;
 
 use graphql::{
 	CHAPTERS_QUERY, DETAILS_QUERY, DetailsVariables, FILTERS_QUERY, FiltersDto, GqlRequest,
-	OFFSET_COUNT, PAGES_QUERY, PagesVariables, SEARCH_QUERY, SearchVariables,
+	MANGAS_QUERY, MangasVariables, PAGE_SIZE, PAGES_QUERY, PagesVariables,
 };
 use models::{
-	ChaptersData, DetailsData, FiltersResponse, GqlResponse, PagesData, SearchData,
+	ChaptersData, DetailsData, FiltersResponse, GqlResponse, MangasData, PagesData,
 	build_manga_key, split_chapter_key, split_manga_key,
 };
 
@@ -146,29 +147,49 @@ impl<C: Config> Source for SenkuroEngine<C> {
 			}
 		}
 
-		let vars = SearchVariables {
-			query: query.filter(|q| !q.trim().is_empty()),
+		// Cursor pagination: stash endCursor between calls keyed by site so
+		// page=N reuses the cursor returned by page=N-1. Anytime we hit
+		// page=1 the cursor is reset, so changing query/filters works as
+		// long as the user re-enters the catalog from the top.
+		let trimmed_query = query
+			.as_ref()
+			.map(|q| q.trim().to_string())
+			.filter(|q| !q.is_empty());
+		let after = if page <= 1 {
+			None
+		} else {
+			cursor_get::<C>()
+		};
+
+		let vars = MangasVariables {
+			first: PAGE_SIZE,
+			after,
+			search: trimmed_query,
 			kind: kind.into_option(),
 			status: status.into_option(),
-			translation_status: translation_status.into_option(),
 			label: label.into_option(),
 			format: format.into_option(),
 			rating: rating.into_option(),
-			offset: Some(OFFSET_COUNT * (page - 1).max(0)),
 		};
+		// translationStatus is intentionally not forwarded — the new mangas()
+		// field doesn't accept it. The filter is still surfaced in the UI for
+		// continuity but currently a no-op server-side.
+		let _ = translation_status;
 
 		let payload = GqlRequest {
-			query: SEARCH_QUERY,
+			query: MANGAS_QUERY,
 			variables: vars,
 		};
-		let body = serde_json::to_vec(&payload).map_err(|e| error!("encode search: {e}"))?;
-		let data: SearchData = post_graphql("searchTachiyomiManga", &body)?;
-		let mangas = data
-			.manga_tachiyomi_search
-			.map(|p| p.mangas)
-			.unwrap_or_default();
-		let has_next_page = mangas.len() as i32 >= OFFSET_COUNT;
-		let entries: Vec<Manga> = mangas.into_iter().map(|m| m.into_manga(C::BASE_URL)).collect();
+		let body = serde_json::to_vec(&payload).map_err(|e| error!("encode mangas: {e}"))?;
+		let data: MangasData = post_graphql("mangasCatalog", &body)?;
+		let conn = data.mangas.unwrap_or_default();
+		let has_next_page = conn.page_info.as_ref().map(|p| p.has_next_page).unwrap_or(false);
+		cursor_set::<C>(conn.page_info.as_ref().and_then(|p| p.end_cursor.clone()));
+		let entries: Vec<Manga> = conn
+			.edges
+			.into_iter()
+			.map(|e| e.node.into_manga(C::BASE_URL))
+			.collect();
 		Ok(MangaPageResult {
 			entries,
 			has_next_page,
@@ -280,10 +301,16 @@ impl<C: Config> DeepLinkHandler for SenkuroEngine<C> {
 }
 
 impl<C: Config> SenkuroEngine<C> {
-	/// Build a search request with at most a single type filter applied, plus the
-	/// per-source default rating include / genre exclude. Used by both
-	/// [`ListingProvider`] tabs and the home layout sections.
-	fn fetch_catalog(type_slug: Option<&'static str>, page: i32) -> Result<MangaPageResult> {
+	/// Build a `mangas()` request with at most a single type filter applied,
+	/// plus the per-source default rating include / genre exclude. Used by
+	/// both [`ListingProvider`] tabs and the home layout sections. Reuses the
+	/// listing-specific cursor cache so successive pages of the same listing
+	/// continue from where the last one stopped.
+	fn fetch_catalog(
+		listing_id: &str,
+		type_slug: Option<&'static str>,
+		page: i32,
+	) -> Result<MangaPageResult> {
 		let mut kind = FiltersDto::default();
 		if let Some(t) = type_slug {
 			kind.include.push(t.to_string());
@@ -301,32 +328,72 @@ impl<C: Config> SenkuroEngine<C> {
 			label.exclude.push(slug.to_string());
 		}
 
-		let vars = SearchVariables {
-			query: None,
+		let after = if page <= 1 {
+			None
+		} else {
+			listing_cursor_get::<C>(listing_id)
+		};
+
+		let vars = MangasVariables {
+			first: PAGE_SIZE,
+			after,
+			search: None,
 			kind: kind.into_option(),
 			status: None,
-			translation_status: None,
 			label: label.into_option(),
 			format: None,
 			rating: rating.into_option(),
-			offset: Some(OFFSET_COUNT * (page - 1).max(0)),
 		};
 		let body = serde_json::to_vec(&GqlRequest {
-			query: SEARCH_QUERY,
+			query: MANGAS_QUERY,
 			variables: vars,
 		})
 		.map_err(|e| error!("encode catalog: {e}"))?;
-		let data: SearchData = post_graphql("searchTachiyomiManga", &body)?;
-		let mangas = data
-			.manga_tachiyomi_search
-			.map(|p| p.mangas)
-			.unwrap_or_default();
-		let has_next_page = mangas.len() as i32 >= OFFSET_COUNT;
-		let entries: Vec<Manga> = mangas.into_iter().map(|m| m.into_manga(C::BASE_URL)).collect();
+		let data: MangasData = post_graphql("mangasCatalog", &body)?;
+		let conn = data.mangas.unwrap_or_default();
+		let has_next_page = conn.page_info.as_ref().map(|p| p.has_next_page).unwrap_or(false);
+		listing_cursor_set::<C>(listing_id, conn.page_info.as_ref().and_then(|p| p.end_cursor.clone()));
+		let entries: Vec<Manga> = conn
+			.edges
+			.into_iter()
+			.map(|e| e.node.into_manga(C::BASE_URL))
+			.collect();
 		Ok(MangaPageResult {
 			entries,
 			has_next_page,
 		})
+	}
+}
+
+fn cursor_key<C: Config>() -> String {
+	alloc::format!("senkuro.cursor.{}", C::SITE)
+}
+
+fn cursor_get<C: Config>() -> Option<String> {
+	defaults_get::<String>(&cursor_key::<C>()).filter(|s| !s.is_empty())
+}
+
+fn cursor_set<C: Config>(value: Option<String>) {
+	let key = cursor_key::<C>();
+	match value {
+		Some(v) => defaults_set(&key, DefaultValue::String(v)),
+		None => defaults_set(&key, DefaultValue::String(String::new())),
+	}
+}
+
+fn listing_cursor_key<C: Config>(listing_id: &str) -> String {
+	alloc::format!("senkuro.lcursor.{}.{}", C::SITE, listing_id)
+}
+
+fn listing_cursor_get<C: Config>(listing_id: &str) -> Option<String> {
+	defaults_get::<String>(&listing_cursor_key::<C>(listing_id)).filter(|s| !s.is_empty())
+}
+
+fn listing_cursor_set<C: Config>(listing_id: &str, value: Option<String>) {
+	let key = listing_cursor_key::<C>(listing_id);
+	match value {
+		Some(v) => defaults_set(&key, DefaultValue::String(v)),
+		None => defaults_set(&key, DefaultValue::String(String::new())),
 	}
 }
 
@@ -340,21 +407,22 @@ const TYPE_SECTIONS: &[(&str, &str, Option<&str>)] = &[
 
 impl<C: Config> ListingProvider for SenkuroEngine<C> {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
-		let id = listing.id.as_str();
-		if id == "popular" || id.is_empty() {
-			return Self::fetch_catalog(None, page);
+		let id = listing.id.clone();
+		let id_ref = id.as_str();
+		if id_ref == "popular" || id_ref.is_empty() {
+			return Self::fetch_catalog("popular", None, page);
 		}
 		let type_slug = TYPE_SECTIONS
 			.iter()
-			.find(|(lid, _, _)| *lid == id)
+			.find(|(lid, _, _)| *lid == id_ref)
 			.and_then(|(_, _, slug)| *slug);
-		Self::fetch_catalog(type_slug, page)
+		Self::fetch_catalog(id_ref, type_slug, page)
 	}
 }
 
 impl<C: Config> Home for SenkuroEngine<C> {
 	fn get_home(&self) -> Result<HomeLayout> {
-		let popular = Self::fetch_catalog(None, 1)?.entries;
+		let popular = Self::fetch_catalog("popular", None, 1)?.entries;
 		let mut components: Vec<HomeComponent> = Vec::with_capacity(1 + TYPE_SECTIONS.len());
 		components.push(HomeComponent {
 			title: Some("Популярное".to_string()),
@@ -365,7 +433,7 @@ impl<C: Config> Home for SenkuroEngine<C> {
 			},
 		});
 		for (lid, title, type_slug) in TYPE_SECTIONS {
-			let entries = Self::fetch_catalog(*type_slug, 1)
+			let entries = Self::fetch_catalog(*lid, *type_slug, 1)
 				.map(|r| r.entries)
 				.unwrap_or_default();
 			if entries.is_empty() {
