@@ -25,9 +25,6 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 | [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v3 | beta | ранобэ (текст) |
 | [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
 | [Ранобэ.рф](sources/ru.ranoberf/) | https://ранобэ.рф | v2 | beta | ранобэ (текст) |
-| Acomics | https://acomics.ru | — | планируется | комиксы |
-| MangaBuff | https://mangabuff.ru | — | планируется | манга |
-| RanobeLib (old) | https://old.ranobelib.me | — | планируется | ранобэ (текст) |
 
 **Beta** означает, что источник собирается и устанавливается, но полевая обкатка ещё не закончена. Если что-то не работает — заведите [issue](https://github.com/Sw1tchtaks/aidoku-sources-for-russians/issues).
 
