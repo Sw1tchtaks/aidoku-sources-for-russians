@@ -9,7 +9,7 @@
 				"key": "login",
 				"notification": "cookies.changed",
 				"method": "web",
-				"url": "https://20.allhen.online/internal/auth",
+				"url": "https://3.grouple.co/internal/auth?siteId=4&targetUri=https%3A%2F%2F20.allhen.online%2F",
 				"title": "Войти на AllHentai",
 				"refreshes": ["listings", "content"]
 			}
