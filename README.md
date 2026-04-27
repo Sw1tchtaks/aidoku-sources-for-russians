@@ -19,8 +19,7 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 | Источник | Сайт | Версия | Статус | Содержимое |
 |----------|------|:---:|--------|------------|
 | [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v6 | работает | манга, манхва, маньхуа, комиксы |
-| [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v2 | beta · web-login | манга (Grouple) |
-| [MintManga](sources/ru.mintmanga/) | https://mintmanga.live | v1 | beta | манга (Grouple) |
+| [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v3 | beta · web-login + token | манга (Grouple) |
 | [MangaBuff](sources/ru.mangabuff/) | https://mangabuff.ru | v1 | beta | манга, манхва |
 | [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v5 | beta | ранобэ (текст + иллюстрации) |
 | [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
@@ -36,7 +35,7 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
   - Статические фильтры тип / формат / статус / статус перевода / возрастной рейтинг
   - Каталог через `mangas(first, after, …)` Relay-style; пагинация cursor-based, кэшируется в defaults
   - Веб-логин не реализован: API анонимный, для бесплатных тайтлов работает без аккаунта
-- **Grouple-семейство** (ReadManga / MintManga) — общий HTML-парсер (`templates/grouple`):
+- **Grouple-семейство** (ReadManga) — общий HTML-парсер (`templates/grouple`):
   - Каталог + поиск
   - Современный (`.cr-*`) и легаси (`.expandable`) layout карточек
   - Извлечение страниц чтения из `rm_h.readerInit(...)` JS-массива
@@ -93,7 +92,6 @@ cd sources/ru.senkuro && aidoku package
 └── sources/               # сами источники, каждый собирается в .aix
     ├── ru.senkuro/
     ├── ru.readmanga/
-    ├── ru.mintmanga/
     ├── ru.mangabuff/
     ├── ru.ranobes/
     ├── ru.ranobehub/
