@@ -54,6 +54,14 @@ fn store_cookie<C: Config>(value: &str) {
 	);
 }
 
+/// Per-source auth token (Grouple lets logged-in users grab a JWT at
+/// `https://3.grouple.co/private/settings/token`). When set, replayed in
+/// `Authorization: Bearer …` on every request — works alongside the cookie
+/// jar so users can pick whichever auth path is more convenient.
+fn stored_token() -> Option<String> {
+	defaults_get::<String>("authToken").filter(|s| !s.is_empty())
+}
+
 impl<C: Config> Grouple<C> {
 	fn base_url() -> String {
 		let mut url =
@@ -76,6 +84,9 @@ impl<C: Config> Grouple<C> {
 			.header("Accept-Language", "ru,en;q=0.9");
 		if let Some(c) = stored_cookie::<C>() {
 			req = req.header("Cookie", &c);
+		}
+		if let Some(t) = stored_token() {
+			req = req.header("Authorization", &format!("Bearer {t}"));
 		}
 		Ok(req)
 	}
@@ -221,6 +232,9 @@ impl<C: Config> ImageRequestProvider for Grouple<C> {
 			.header("Referer", &base);
 		if let Some(c) = stored_cookie::<C>() {
 			req = req.header("Cookie", &c);
+		}
+		if let Some(t) = stored_token() {
+			req = req.header("Authorization", &format!("Bearer {t}"));
 		}
 		Ok(req)
 	}

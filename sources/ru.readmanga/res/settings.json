@@ -2,7 +2,7 @@
 	{
 		"type": "group",
 		"title": "Аккаунт",
-		"footer": "Войдите через WebView чтобы открывать главы, требующие авторизацию. После успешного входа cookies сохраняются и подставляются во все запросы.",
+		"footer": "Войдите либо через WebView (быстрый путь), либо вставьте JWT-токен из https://3.grouple.co/private/settings/token. Любой из двух методов даёт доступ к закрытым/возрастным главам.",
 		"items": [
 			{
 				"type": "login",
@@ -10,7 +10,17 @@
 				"notification": "cookies.changed",
 				"method": "web",
 				"url": "https://a.zazaza.me/internal/auth",
-				"title": "Войти на ReadManga",
+				"title": "Войти через WebView",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "authToken",
+				"title": "Auth Token (опционально)",
+				"subtitle": "JWT с https://3.grouple.co/private/settings/token. Подставляется в заголовок Authorization: Bearer на каждом запросе.",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
 				"refreshes": ["listings", "content"]
 			}
 		]
