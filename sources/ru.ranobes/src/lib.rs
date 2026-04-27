@@ -9,8 +9,9 @@ use aidoku::imports::html::{Document, Html};
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
-	Chapter, DeepLinkHandler, DeepLinkResult, FilterValue, ImageRequestProvider, Listing,
-	ListingProvider, Manga, MangaPageResult, Page, PageContent, PageContext, Result, Source,
+	Chapter, DeepLinkHandler, DeepLinkResult, FilterValue, Home, HomeComponent, HomeComponentValue,
+	HomeLayout, ImageRequestProvider, Link, Listing, ListingKind, ListingProvider, Manga,
+	MangaPageResult, Page, PageContent, PageContext, Result, Source,
 	alloc::{String, Vec},
 };
 use alloc::format;
@@ -18,7 +19,9 @@ use alloc::string::ToString;
 
 const DEFAULT_BASE_URL: &str = "https://ranobes.com";
 const PAGE_SIZE: i32 = 10;
-const CHAPTER_LIST_PAGES_CAP: i32 = 50;
+// Each chapter list page = 1 HTTP request. Capped to 10 (≈250 chapters)
+// because previously walking 50 pages triggered DDoS-Guard 403s.
+const CHAPTER_LIST_PAGES_CAP: i32 = 10;
 
 fn base_url() -> String {
 	let mut url = defaults_get::<String>("baseUrl").unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
@@ -181,6 +184,40 @@ impl ListingProvider for Ranobes {
 	}
 }
 
+impl Home for Ranobes {
+	fn get_home(&self) -> Result<HomeLayout> {
+		let base = base_url();
+		let url = format!("{base}/ranobe/page/1/");
+		let doc = fetch_html(&url)?;
+		let entries = parse_listing(&doc).entries;
+		let big_entries: Vec<Manga> = entries.iter().take(5).cloned().collect();
+		let scroller_entries: Vec<Link> = entries.into_iter().skip(5).map(Link::from).collect();
+		let components = alloc::vec![
+			HomeComponent {
+				title: Some("Популярное".to_string()),
+				subtitle: None,
+				value: HomeComponentValue::BigScroller {
+					entries: big_entries,
+					auto_scroll_interval: Some(8.0),
+				},
+			},
+			HomeComponent {
+				title: Some("Каталог".to_string()),
+				subtitle: None,
+				value: HomeComponentValue::Scroller {
+					entries: scroller_entries,
+					listing: Some(Listing {
+						id: "popular".to_string(),
+						name: "Каталог".to_string(),
+						kind: ListingKind::Default,
+					}),
+				},
+			},
+		];
+		Ok(HomeLayout { components })
+	}
+}
+
 impl ImageRequestProvider for Ranobes {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
 		let base = base_url();
@@ -213,6 +250,7 @@ impl DeepLinkHandler for Ranobes {
 register_source!(
 	Ranobes,
 	ListingProvider,
+	Home,
 	ImageRequestProvider,
 	DeepLinkHandler
 );

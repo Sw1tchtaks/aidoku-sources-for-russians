@@ -24,10 +24,12 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 | [MintManga](sources/ru.mintmanga/) | https://mintmanga.live | v1 | beta | манга (Grouple) |
 | [SelfManga](sources/ru.selfmanga/) | https://selfmanga.live | v1 | beta | манга (Grouple) |
 | [AllHentai](sources/ru.allhentai/) | https://allhen.online | v1 | beta | 18+ (Grouple) |
-| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v2 | работает | ранобэ (текст) |
+| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v3 | beta | ранобэ (текст) |
+| [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
+| [Ранобэ.рф](sources/ru.ranoberf/) | https://ранобэ.рф | v2 | beta | ранобэ (текст) |
 | Acomics | https://acomics.ru | — | планируется | комиксы |
 | MangaBuff | https://mangabuff.ru | — | планируется | манга |
-| RanobeHub | https://ranobehub.org | — | планируется | ранобэ (текст) |
+| RanobeLib (old) | https://old.ranobelib.me | — | планируется | ранобэ (текст) |
 
 **Beta** означает, что источник собирается и устанавливается, но полевая обкатка ещё не закончена. Если что-то не работает — заведите [issue](https://github.com/Sw1tchtaks/aidoku-sources-for-russians/issues).
 
@@ -46,9 +48,12 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
   - Извлечение страниц чтения из `rm_h.readerInit(...)` JS-массива
   - Зеркало настраивается в Settings источника
   - Платные/лицензированные главы и WebView-логин в v1 не поддерживаются
-- **Ranobes** — текстовый источник:
+- **Ранобэ-источники** (Ranobes / RanobeHub / Ранобэ.рф):
   - Главы возвращаются как `PageContent::Text(markdown)` и рендерятся в вертикальном тексто-ридере
-  - Список глав парсится постранично, до ~1250 глав за refresh
+  - **Ranobes** — DLE-сайт за DDoS-Guard, HTML-скрейпинг. Список глав ограничен 10 страницами (≈250 глав) чтобы не получить 403. Картиночные главы (иллюстрации) пока не отображаются — встроенные `<img>` теряются при strip-HTML.
+  - **RanobeHub** — чистый JSON REST API на `/api/{search,ranobe/{id},ranobe/{id}/contents,chapter/{id}}`, страницы поиска по 12 элементов с настоящей пагинацией.
+  - **Ранобэ.рф** — Next.js SPA. Каталог через `/v3/book` тащит сразу все 800 книг (~1.1 МБ), пагинация на стороне приложения. Карточка и текст глав — парсинг `__NEXT_DATA__` JSON. Без обложек в каталоге (cover URL содержит per-book upload-id, доступный только на странице книги).
+  - У всех — Home-вид как у Senkuro/MangaLib: большая карусель «Популярное» + горизонтальная лента «Каталог».
 
 ## Что есть в официальном репозитории
 

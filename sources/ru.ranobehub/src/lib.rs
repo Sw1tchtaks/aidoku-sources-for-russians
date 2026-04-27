@@ -7,8 +7,9 @@ use aidoku::helpers::uri::encode_uri_component;
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
-	Chapter, DeepLinkHandler, DeepLinkResult, FilterValue, ImageRequestProvider, Listing,
-	ListingProvider, Manga, MangaPageResult, Page, PageContent, PageContext, Result, Source,
+	Chapter, DeepLinkHandler, DeepLinkResult, FilterValue, Home, HomeComponent, HomeComponentValue,
+	HomeLayout, ImageRequestProvider, Link, Listing, ListingKind, ListingProvider, Manga,
+	MangaPageResult, Page, PageContent, PageContext, Result, Source,
 	alloc::{String, Vec},
 };
 use alloc::format;
@@ -180,6 +181,39 @@ impl ListingProvider for RanobeHub {
 	}
 }
 
+impl Home for RanobeHub {
+	fn get_home(&self) -> Result<HomeLayout> {
+		let url = format!("{API_URL}/search?page=1");
+		let envelope: SearchEnvelope = fetch_json(&url)?;
+		let entries: Vec<Manga> = envelope.resource.into_iter().map(|i| i.into_manga()).collect();
+		let big_entries: Vec<Manga> = entries.iter().take(5).cloned().collect();
+		let scroller_entries: Vec<Link> = entries.into_iter().skip(5).map(Link::from).collect();
+		let components = alloc::vec![
+			HomeComponent {
+				title: Some("Популярное".to_string()),
+				subtitle: None,
+				value: HomeComponentValue::BigScroller {
+					entries: big_entries,
+					auto_scroll_interval: Some(8.0),
+				},
+			},
+			HomeComponent {
+				title: Some("Каталог".to_string()),
+				subtitle: None,
+				value: HomeComponentValue::Scroller {
+					entries: scroller_entries,
+					listing: Some(Listing {
+						id: "popular".to_string(),
+						name: "Каталог".to_string(),
+						kind: ListingKind::Default,
+					}),
+				},
+			},
+		];
+		Ok(HomeLayout { components })
+	}
+}
+
 impl ImageRequestProvider for RanobeHub {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
 		Ok(Request::get(url)?
@@ -213,6 +247,7 @@ impl DeepLinkHandler for RanobeHub {
 register_source!(
 	RanobeHub,
 	ListingProvider,
+	Home,
 	ImageRequestProvider,
 	DeepLinkHandler
 );
