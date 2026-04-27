@@ -18,11 +18,13 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 
 | Источник | Сайт | Версия | Статус | Содержимое |
 |----------|------|:---:|--------|------------|
-| [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v5 | работает | манга, манхва, комиксы |
+| [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v6 | работает | манга, манхва, комиксы |
 | [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v1 | beta | манга (Grouple) |
 | [MintManga](sources/ru.mintmanga/) | https://mintmanga.live | v1 | beta | манга (Grouple) |
 | [SelfManga](sources/ru.selfmanga/) | https://selfmanga.live | v1 | beta | манга (Grouple) |
-| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v3 | beta | ранобэ (текст) |
+| [MangaBuff](sources/ru.mangabuff/) | https://mangabuff.ru | v1 | beta | манга, манхва |
+| [Acomics](sources/ru.acomics/) | https://acomics.ru | v1 | beta | веб-комиксы |
+| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v4 | beta | ранобэ (текст + иллюстрации) |
 | [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
 | [Ранобэ.рф](sources/ru.ranoberf/) | https://ранобэ.рф | v2 | beta | ранобэ (текст) |
 
