@@ -2,8 +2,18 @@
 	{
 		"type": "group",
 		"title": "Аккаунт",
-		"footer": "Войдите либо через WebView, либо вставьте JWT-токен с https://3.grouple.co/private/settings/token. Токен универсальный — один JWT работает для всех Grouple-сайтов вашего аккаунта (ReadManga / AllHentai / и т.д.). Внимание: вход через Google в WebView блокируется самим Google (\"disallowed_useragent\") — используйте username/password Grouple или токен.",
+		"footer": "Три способа входа, в порядке надёжности: (1) скопируйте Cookie из вашего залогиненного браузера в поле «Cookies из браузера» — самый железный путь, обходит проблемы с WebView и OAuth; (2) WebView-вход через Grouple — может не сработать, если включён Google-логин (Google блокирует embedded WebView) или если страница закрывается слишком быстро; (3) JWT-токен с https://3.grouple.co/private/settings/token — задумывался Grouple для сторонних API, для HTML-страниц иногда не принимается.",
 		"items": [
+			{
+				"type": "text",
+				"key": "manualCookies",
+				"title": "Cookies из браузера",
+				"subtitle": "DevTools → Network → любой запрос на 20.allhen.online → заголовок Cookie → скопировать полностью и вставить сюда. Формат: name=value; name=value; …",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
+				"refreshes": ["listings", "content"]
+			},
 			{
 				"type": "login",
 				"key": "login",
@@ -17,7 +27,7 @@
 				"type": "text",
 				"key": "authToken",
 				"title": "Auth Token (опционально)",
-				"subtitle": "JWT с https://3.grouple.co/private/settings/token. Если не получается войти через WebView (Google OAuth блокируется) — этот путь надёжнее.",
+				"subtitle": "JWT с https://3.grouple.co/private/settings/token. Подставляется в Authorization: Bearer.",
 				"default": "",
 				"keyboardType": 0,
 				"autocorrectionDisabled": true,

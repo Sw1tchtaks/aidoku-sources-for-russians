@@ -62,6 +62,15 @@ fn stored_token() -> Option<String> {
 	defaults_get::<String>("authToken").filter(|s| !s.is_empty())
 }
 
+/// Free-form Cookie header set by the user from browser DevTools. The most
+/// reliable escape hatch: when the WebView login closes too early, the
+/// per-Grouple JWT isn't accepted by the HTML pages, and Google OAuth is
+/// blocked in WebKit, the user can copy the entire `Cookie:` header from a
+/// logged-in browser session and paste it here.
+fn manual_cookies() -> Option<String> {
+	defaults_get::<String>("manualCookies").filter(|s| !s.is_empty())
+}
+
 impl<C: Config> Grouple<C> {
 	fn base_url() -> String {
 		let mut url =
@@ -82,8 +91,15 @@ impl<C: Config> Grouple<C> {
 				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 			)
 			.header("Accept-Language", "ru,en;q=0.9");
-		if let Some(c) = stored_cookie::<C>() {
-			req = req.header("Cookie", &c);
+		// Cookie precedence: manual paste wins (it's the user's own logged-in
+		// session, byte-for-byte), otherwise replay whatever the WebView
+		// captured. Fold them together when both are set so cookies set by
+		// post-login navigation don't get dropped.
+		match (manual_cookies(), stored_cookie::<C>()) {
+			(Some(m), Some(c)) => req = req.header("Cookie", &format!("{m}; {c}")),
+			(Some(m), None) => req = req.header("Cookie", &m),
+			(None, Some(c)) => req = req.header("Cookie", &c),
+			(None, None) => {}
 		}
 		if let Some(t) = stored_token() {
 			req = req.header("Authorization", &format!("Bearer {t}"));
@@ -230,8 +246,15 @@ impl<C: Config> ImageRequestProvider for Grouple<C> {
 		let mut req = Request::get(url)?
 			.header("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64)")
 			.header("Referer", &base);
-		if let Some(c) = stored_cookie::<C>() {
-			req = req.header("Cookie", &c);
+		// Cookie precedence: manual paste wins (it's the user's own logged-in
+		// session, byte-for-byte), otherwise replay whatever the WebView
+		// captured. Fold them together when both are set so cookies set by
+		// post-login navigation don't get dropped.
+		match (manual_cookies(), stored_cookie::<C>()) {
+			(Some(m), Some(c)) => req = req.header("Cookie", &format!("{m}; {c}")),
+			(Some(m), None) => req = req.header("Cookie", &m),
+			(None, Some(c)) => req = req.header("Cookie", &c),
+			(None, None) => {}
 		}
 		if let Some(t) = stored_token() {
 			req = req.header("Authorization", &format!("Bearer {t}"));

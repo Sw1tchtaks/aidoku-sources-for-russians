@@ -2,7 +2,7 @@
 	"info": {
 		"id": "ru.readmanga",
 		"name": "ReadManga",
-		"version": 3,
+		"version": 4,
 		"url": "https://readmanga.live",
 		"contentRating": 1,
 		"languages": ["ru"]
