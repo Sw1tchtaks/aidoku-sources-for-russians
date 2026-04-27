@@ -198,8 +198,17 @@ impl Home for Ranobes {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let base = base_url();
 		let url = format!("{base}/ranobe/page/1/");
-		let doc = fetch_html(&url)?;
-		let entries = parse_listing(&doc).entries;
+		// Ranobes is behind DDoS-Guard. The very first request from a fresh
+		// process often gets a 403 challenge; catalog tab works on retry once
+		// the user has any cached cookie. Don't propagate the failure as an
+		// error here — Aidoku would render a spinner-skeleton forever. Return
+		// an empty home with a static "Каталог" tile instead.
+		let entries = fetch_html(&url)
+			.map(|doc| parse_listing(&doc).entries)
+			.unwrap_or_else(|e| {
+				println!("[ranobes] home fetch failed (likely DDoS-Guard): {e:?}");
+				Vec::new()
+			});
 		let big_entries: Vec<Manga> = entries.iter().take(5).cloned().collect();
 		let scroller_entries: Vec<Link> = entries.into_iter().skip(5).map(Link::from).collect();
 		let components = alloc::vec![
