@@ -5,13 +5,13 @@ mod pages;
 mod parser;
 
 use aidoku::helpers::uri::encode_uri_component;
-use aidoku::imports::defaults::defaults_get;
+use aidoku::imports::defaults::{DefaultValue, defaults_get, defaults_set};
 use aidoku::imports::html::{Document, Html};
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
 use aidoku::{
-	Chapter, FilterValue, ImageRequestProvider, Listing, ListingProvider, Manga, MangaPageResult,
-	Page, PageContent, PageContext, Result, Source,
+	Chapter, FilterValue, HashMap, ImageRequestProvider, Listing, ListingProvider, Manga,
+	MangaPageResult, Page, PageContent, PageContext, Result, Source, WebLoginHandler,
 	alloc::{String, Vec},
 };
 use alloc::format;
@@ -39,6 +39,21 @@ impl<C: Config> Default for Grouple<C> {
 	}
 }
 
+fn cookie_key<C: Config>() -> String {
+	format!("grouple.cookie.{}", C::NAME)
+}
+
+fn stored_cookie<C: Config>() -> Option<String> {
+	defaults_get::<String>(&cookie_key::<C>()).filter(|s| !s.is_empty())
+}
+
+fn store_cookie<C: Config>(value: &str) {
+	defaults_set(
+		&cookie_key::<C>(),
+		DefaultValue::String(value.to_string()),
+	);
+}
+
 impl<C: Config> Grouple<C> {
 	fn base_url() -> String {
 		let mut url =
@@ -49,17 +64,25 @@ impl<C: Config> Grouple<C> {
 		url
 	}
 
-	fn fetch_html(url: &str) -> Result<Document> {
+	fn build_request(url: &str) -> Result<Request> {
 		let base = Self::base_url();
-		let response = Request::get(url)?
+		let mut req = Request::get(url)?
 			.header("User-Agent", C::USER_AGENT)
 			.header("Referer", &base)
 			.header(
 				"Accept",
 				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 			)
-			.header("Accept-Language", "ru,en;q=0.9")
-			.send()?;
+			.header("Accept-Language", "ru,en;q=0.9");
+		if let Some(c) = stored_cookie::<C>() {
+			req = req.header("Cookie", &c);
+		}
+		Ok(req)
+	}
+
+	fn fetch_html(url: &str) -> Result<Document> {
+		let base = Self::base_url();
+		let response = Self::build_request(url)?.send()?;
 		let status = response.status_code();
 		let bytes = response.get_data()?;
 		if !(200..400).contains(&status) {
@@ -150,10 +173,7 @@ impl<C: Config> Source for Grouple<C> {
 	fn get_page_list(&self, _manga: Manga, chapter: Chapter) -> Result<Vec<Page>> {
 		let base = Self::base_url();
 		let url = format!("{base}{}", chapter.key);
-		let response = Request::get(&url)?
-			.header("User-Agent", C::USER_AGENT)
-			.header("Referer", &base)
-			.send()?;
+		let response = Self::build_request(&url)?.send()?;
 		let status = response.status_code();
 		let bytes = response.get_data()?;
 		if !(200..400).contains(&status) {
@@ -196,9 +216,36 @@ impl<C: Config> ListingProvider for Grouple<C> {
 impl<C: Config> ImageRequestProvider for Grouple<C> {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
 		let base = Self::base_url();
-		let req = Request::get(url)?
+		let mut req = Request::get(url)?
 			.header("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64)")
 			.header("Referer", &base);
+		if let Some(c) = stored_cookie::<C>() {
+			req = req.header("Cookie", &c);
+		}
 		Ok(req)
+	}
+}
+
+impl<C: Config> WebLoginHandler for Grouple<C> {
+	fn handle_web_login(&self, _key: String, cookies: HashMap<String, String>) -> Result<bool> {
+		// Grouple sets several cookies during login (session id, user prefs,
+		// CSRF). We don't know which one matters for the auth check, so we
+		// preserve everything and replay the whole jar on every request.
+		if cookies.is_empty() {
+			println!("[{}] login: webview returned no cookies", C::NAME);
+			return Ok(false);
+		}
+		let mut header = String::new();
+		for (k, v) in cookies.iter() {
+			if !header.is_empty() {
+				header.push_str("; ");
+			}
+			header.push_str(k);
+			header.push('=');
+			header.push_str(v);
+		}
+		store_cookie::<C>(&header);
+		println!("[{}] login: stored {} cookies", C::NAME, cookies.len());
+		Ok(true)
 	}
 }

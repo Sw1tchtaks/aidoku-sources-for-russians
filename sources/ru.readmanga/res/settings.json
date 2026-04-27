@@ -1,6 +1,22 @@
 [
 	{
 		"type": "group",
+		"title": "Аккаунт",
+		"footer": "Войдите через WebView чтобы открывать главы, требующие авторизацию. После успешного входа cookies сохраняются и подставляются во все запросы.",
+		"items": [
+			{
+				"type": "login",
+				"key": "login",
+				"notification": "cookies.changed",
+				"method": "web",
+				"url": "https://a.zazaza.me/internal/auth",
+				"title": "Войти на ReadManga",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Настройки",
 		"footer": "Зеркало надо менять, когда основное возвращает 5xx или CAPTCHA. Список рабочих доменов смотрите на форуме Grouple.",
 		"items": [
