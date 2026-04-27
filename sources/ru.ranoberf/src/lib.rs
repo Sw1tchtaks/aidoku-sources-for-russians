@@ -131,11 +131,13 @@ impl Source for Ranoberf {
 			let url = format!("{SITE_URL}/{slug}");
 			let doc = fetch_html(&url)?;
 			let props: BookPagePropsRaw = extract_next_props(&doc)?;
-			let Some(book) = props.book else {
+			let Some(mut book) = props.book else {
 				return Err(error!("Ранобэ.рф: book missing in page props"));
 			};
 
-			let chapters_dto = book.chapters.clone();
+			// Take chapters out of `book` so we can move `book` into merge_book_into
+			// without cloning the (potentially large) chapter list.
+			let chapters_dto = book.chapters.take();
 			if needs_details {
 				updated = merge_book_into(book, updated);
 			}
