@@ -1,6 +1,22 @@
 [
 	{
 		"type": "group",
+		"title": "Аккаунт",
+		"footer": "AllHentai прячет большинство глав за регистрацию. Войдите через WebView чтобы открыть чтение — после успешного входа cookies сохраняются и подставляются во все запросы.",
+		"items": [
+			{
+				"type": "login",
+				"key": "login",
+				"notification": "cookies.changed",
+				"method": "web",
+				"url": "https://20.allhen.online/internal/auth",
+				"title": "Войти на AllHentai",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Настройки",
 		"footer": "Зеркало AllHentai регулярно меняется. Если каталог отдаёт 403/CAPTCHA — поменяйте домен здесь.",
 		"items": [
