@@ -2,7 +2,7 @@
 	{
 		"type": "group",
 		"title": "Аккаунт",
-		"footer": "AllHentai прячет большинство глав за регистрацию. Войдите через WebView чтобы открыть чтение — после успешного входа cookies сохраняются и подставляются во все запросы.",
+		"footer": "Войдите либо через WebView, либо вставьте JWT-токен с https://3.grouple.co/private/settings/token. Токен универсальный — один JWT работает для всех Grouple-сайтов вашего аккаунта (ReadManga / AllHentai / и т.д.). Внимание: вход через Google в WebView блокируется самим Google (\"disallowed_useragent\") — используйте username/password Grouple или токен.",
 		"items": [
 			{
 				"type": "login",
@@ -10,7 +10,17 @@
 				"notification": "cookies.changed",
 				"method": "web",
 				"url": "https://3.grouple.co/internal/auth?siteId=4&targetUri=https%3A%2F%2F20.allhen.online%2F",
-				"title": "Войти на AllHentai",
+				"title": "Войти через WebView",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "authToken",
+				"title": "Auth Token (опционально)",
+				"subtitle": "JWT с https://3.grouple.co/private/settings/token. Если не получается войти через WebView (Google OAuth блокируется) — этот путь надёжнее.",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
 				"refreshes": ["listings", "content"]
 			}
 		]

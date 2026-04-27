@@ -2,7 +2,7 @@
 	{
 		"type": "group",
 		"title": "Аккаунт",
-		"footer": "Войдите либо через WebView (быстрый путь), либо вставьте JWT-токен из https://3.grouple.co/private/settings/token. Любой из двух методов даёт доступ к закрытым/возрастным главам.",
+		"footer": "Войдите либо через WebView, либо вставьте JWT-токен из https://3.grouple.co/private/settings/token. Внимание: вход через Google в WebView блокируется самим Google (\"disallowed_useragent\") — используйте username/password Grouple или токен. Токен универсальный — один JWT работает для всех Grouple-сайтов вашего аккаунта.",
 		"items": [
 			{
 				"type": "login",
