@@ -265,13 +265,40 @@ impl<C: Config> ImageRequestProvider for Grouple<C> {
 
 impl<C: Config> WebLoginHandler for Grouple<C> {
 	fn handle_web_login(&self, _key: String, cookies: HashMap<String, String>) -> Result<bool> {
-		// Grouple sets several cookies during login (session id, user prefs,
-		// CSRF). We don't know which one matters for the auth check, so we
-		// preserve everything and replay the whole jar on every request.
+		// Aidoku invokes this every time the WebView's cookie jar changes.
+		// Grouple sets ~3 cookies on initial page load (JSESSIONID, CSRF,
+		// site prefs) BEFORE the user has typed anything — if we returned
+		// `true` for that set, Aidoku would close the WebView immediately
+		// and the user never gets to log in. Return `false` until we see
+		// a marker that only appears after successful authentication.
 		if cookies.is_empty() {
-			println!("[{}] login: webview returned no cookies", C::NAME);
 			return Ok(false);
 		}
+
+		let has_login_marker = cookies.iter().any(|(name, value)| {
+			let lower = name.to_lowercase();
+			lower.contains("auth")
+				|| lower.contains("token")
+				|| lower.contains("logged")
+				|| lower.contains("user_id")
+				|| lower == "remember_me"
+				|| lower.starts_with("user_")
+				|| lower.starts_with("lab_session")
+				// JWT-formatted value (Grouple's user_session sometimes carries one)
+				|| value.starts_with("eyJ")
+		});
+
+		// Belt-and-braces: a logged-in Grouple jar usually has 5+ cookies
+		// (JSESSIONID + remember_me + at least one user/role hint).
+		if !has_login_marker && cookies.len() < 5 {
+			println!(
+				"[{}] login: {} cookies, no auth marker yet — keeping WebView open",
+				C::NAME,
+				cookies.len()
+			);
+			return Ok(false);
+		}
+
 		let mut header = String::new();
 		for (k, v) in cookies.iter() {
 			if !header.is_empty() {
@@ -282,7 +309,12 @@ impl<C: Config> WebLoginHandler for Grouple<C> {
 			header.push_str(v);
 		}
 		store_cookie::<C>(&header);
-		println!("[{}] login: stored {} cookies", C::NAME, cookies.len());
+		println!(
+			"[{}] login: stored {} cookies (marker={})",
+			C::NAME,
+			cookies.len(),
+			has_login_marker
+		);
 		Ok(true)
 	}
 }
