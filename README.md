@@ -19,11 +19,9 @@ https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 | Источник | Сайт | Версия | Статус | Содержимое |
 |----------|------|:---:|--------|------------|
 | [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v5 | работает | манга, манхва, комиксы |
-| [Senkognito](sources/ru.senkognito/) | https://senkognito.com | v5 | работает | 18+ |
 | [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v1 | beta | манга (Grouple) |
 | [MintManga](sources/ru.mintmanga/) | https://mintmanga.live | v1 | beta | манга (Grouple) |
 | [SelfManga](sources/ru.selfmanga/) | https://selfmanga.live | v1 | beta | манга (Grouple) |
-| [AllHentai](sources/ru.allhentai/) | https://allhen.online | v1 | beta | 18+ (Grouple) |
 | [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v3 | beta | ранобэ (текст) |
 | [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
 | [Ранобэ.рф](sources/ru.ranoberf/) | https://ранобэ.рф | v2 | beta | ранобэ (текст) |
