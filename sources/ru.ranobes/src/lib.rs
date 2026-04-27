@@ -164,14 +164,24 @@ impl Source for Ranobes {
 		let base = base_url();
 		let url = parser::chapter_url(&base, &chapter.key);
 		let doc = fetch_html(&url)?;
-		let text = parser::extract_chapter_text(&doc);
-		if text.is_empty() {
-			println!("[ranobes] empty text for {url}");
+		let pieces = parser::extract_chapter_pieces(&doc);
+		if pieces.is_empty() {
+			println!("[ranobes] empty body for {url}");
 		}
-		Ok(alloc::vec![Page {
-			content: PageContent::text(text),
-			..Default::default()
-		}])
+		let pages: Vec<Page> = pieces
+			.into_iter()
+			.map(|p| match p {
+				parser::ChapterPiece::Image(u) => Page {
+					content: PageContent::url(u),
+					..Default::default()
+				},
+				parser::ChapterPiece::Text(t) => Page {
+					content: PageContent::text(t),
+					..Default::default()
+				},
+			})
+			.collect();
+		Ok(pages)
 	}
 }
 

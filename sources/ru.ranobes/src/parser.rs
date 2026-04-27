@@ -246,29 +246,52 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
 	era * 146097 + doe as i64 - 719468
 }
 
-/// Extract chapter prose from `div#arrticle p` (the typo "arrticle" is what
-/// the DLE template actually uses). Returns markdown — paragraphs joined with
-/// blank lines, trimmed.
-pub fn extract_chapter_text(doc: &Document) -> String {
-	let mut out = String::new();
+/// Extract a chapter's body as a list of (image-url | prose-text) pieces in
+/// document order. The DLE template uses `<div id="arrticle">` (yes, two `r`s)
+/// as the body container; inside are `<p>` paragraphs and `<img>` illustrations.
+pub fn extract_chapter_pieces(doc: &Document) -> Vec<ChapterPiece> {
 	let Some(article) = doc.select_first("div#arrticle") else {
-		return out;
+		return Vec::new();
 	};
-	let Some(paragraphs) = article.select("p") else {
-		return out;
-	};
-	let mut first = true;
-	for p in paragraphs {
-		let text = p.text().unwrap_or_default();
-		let trimmed = text.trim();
-		if trimmed.is_empty() {
-			continue;
+
+	// Collect image URLs once (in document order).
+	let imgs: Vec<String> = article
+		.select("img")
+		.map(|list| {
+			list.into_iter()
+				.filter_map(|img| img.attr("abs:src").or_else(|| img.attr("src")))
+				.filter(|s| !s.is_empty())
+				.collect()
+		})
+		.unwrap_or_default();
+
+	// Collect paragraph text as a single markdown blob.
+	let mut prose = String::new();
+	if let Some(paragraphs) = article.select("p") {
+		let mut first = true;
+		for p in paragraphs {
+			let text = p.text().unwrap_or_default();
+			let trimmed = text.trim();
+			if trimmed.is_empty() {
+				continue;
+			}
+			if !first {
+				prose.push_str("\n\n");
+			}
+			prose.push_str(trimmed);
+			first = false;
 		}
-		if !first {
-			out.push_str("\n\n");
-		}
-		out.push_str(trimmed);
-		first = false;
 	}
-	out
+
+	let mut pieces: Vec<ChapterPiece> = imgs.into_iter().map(ChapterPiece::Image).collect();
+	if !prose.trim().is_empty() {
+		pieces.push(ChapterPiece::Text(prose));
+	}
+	pieces
+}
+
+/// One renderable piece of a chapter body.
+pub enum ChapterPiece {
+	Image(String),
+	Text(String),
 }
