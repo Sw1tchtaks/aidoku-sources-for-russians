@@ -1,6 +1,6 @@
 # Aidoku Sources for Russians
 
-[![Добавить в Aidoku](https://img.shields.io/badge/%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B2-Aidoku-ff2d55?style=for-the-badge)](https://redcatpet.github.io/aidoku-sources-for-russians/)
+[![Добавить в Aidoku](https://img.shields.io/badge/%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B2-Aidoku-ff2d55?style=for-the-badge)](https://sw1tchtaks.github.io/aidoku-sources-for-russians/)
 
 Русскоязычные источники для [Aidoku](https://aidoku.app) на iPhone и iPad.
 
@@ -9,7 +9,7 @@
 Нажмите кнопку выше или добавьте список вручную: `Настройки` → `Список источников` → `+`.
 
 ```text
-https://redcatpet.github.io/aidoku-sources-for-russians/index.min.json
+https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 ```
 
 После установки списка выберите и установите нужные источники в Aidoku. Новые версии публикуются по тому же адресу автоматически.
