@@ -2,16 +2,17 @@
 	"info": {
 		"id": "ru.senkognito",
 		"name": "Senkognito",
-		"version": 6,
+		"version": 15,
 		"url": "https://senkognito.com",
 		"contentRating": 2,
 		"languages": ["ru"]
 	},
 	"listings": [
 		{"id": "popular", "name": "Популярное"},
+		{"id": "latest_updates", "name": "Обновления"},
+		{"id": "latest_titles", "name": "Новинки"},
 		{"id": "manga", "name": "Манга"},
 		{"id": "manhwa", "name": "Манхва"},
-		{"id": "manhua", "name": "Маньхуа"},
-		{"id": "comics", "name": "Комиксы"}
+		{"id": "manhua", "name": "Маньхуа"}
 	]
 }

@@ -19,11 +19,44 @@ pub fn parse_tile(el: &Element, base_url: &str) -> Option<Manga> {
 		return None;
 	}
 
+	let rating = el
+		.select_first(".compact-rate")
+		.and_then(|rate| rate.attr("title"))
+		.filter(|s| !s.trim().is_empty());
+	let chapters = el
+		.select_first(".amount-badge")
+		.and_then(|badge| badge.text())
+		.filter(|s| !s.trim().is_empty());
+	let mut tags = Vec::new();
+	if let Some(rating) = rating {
+		tags.push(format!("★ {rating}"));
+	}
+	if let Some(chapters) = chapters {
+		tags.push(format!("{chapters} глав"));
+	}
+	if let Some(tile_tags) = el.select(".tile-info a.badge, .tags span") {
+		for tag in tile_tags {
+			if let Some(text) = tag.text() {
+				let text = clean_text(&text);
+				if !text.is_empty() && !tags.iter().any(|existing| existing == &text) {
+					tags.push(text);
+				}
+			}
+		}
+	}
+	let description = el
+		.select_first(".manga-description")
+		.and_then(|d| d.text())
+		.map(|s| clean_text(&s))
+		.filter(|s| !s.is_empty());
+
 	Some(Manga {
 		key,
 		title,
 		cover,
 		url: Some(absolute_url(&href, base_url)),
+		description,
+		tags: if tags.is_empty() { None } else { Some(tags) },
 		..Default::default()
 	})
 }
@@ -138,17 +171,16 @@ fn fill_modern(doc: &Document, manga: &mut Manga) {
 		.and_then(|e| e.text());
 
 	// cover
-	let cover = doc
-		.select_first(".cr-hero-poster__img")
-		.or_else(|| doc.select_first(".cr-hero-overlay__bg"))
-		.and_then(|el| {
-			el.attr("src")
-				.or_else(|| el.attr("data-src"))
-				.or_else(|| el.attr("data-original"))
-				.or_else(|| el.attr("data-bg"))
-		});
-	if cover.is_some() {
-		manga.cover = cover;
+	if manga.cover.is_none() {
+		manga.cover = doc
+			.select_first(".cr-hero-poster__img")
+			.or_else(|| doc.select_first(".cr-hero-overlay__bg"))
+			.and_then(|el| {
+				el.attr("src")
+					.or_else(|| el.attr("data-src"))
+					.or_else(|| el.attr("data-original"))
+					.or_else(|| el.attr("data-bg"))
+			});
 	}
 
 	// status
@@ -244,19 +276,26 @@ fn fill_legacy(doc: &Document, manga: &mut Manga) {
 		};
 
 		// cover
-		let cover = info.select_first("img").and_then(|img| {
-			img.attr("data-full")
-				.or_else(|| img.attr("data-original"))
-				.or_else(|| img.attr("src"))
-		});
-		if cover.is_some() {
-			manga.cover = cover;
+		if manga.cover.is_none() {
+			manga.cover = info.select_first("img").and_then(|img| {
+				img.attr("data-full")
+					.or_else(|| img.attr("data-original"))
+					.or_else(|| img.attr("src"))
+			});
 		}
 	}
 
 	manga.description = doc
 		.select_first("div#tab-description .manga-description")
 		.and_then(|e| e.text());
+}
+
+fn clean_text(input: &str) -> String {
+	input
+		.split_whitespace()
+		.collect::<Vec<_>>()
+		.join(" ")
+		.replace("&hellip;", "…")
 }
 
 fn grouple_status(release: &str, translation: &str) -> MangaStatus {

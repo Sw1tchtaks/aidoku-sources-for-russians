@@ -1,0 +1,67 @@
+[
+	{
+		"type": "group",
+		"title": "Аккаунт",
+		"footer": "InkStory открывает публичный каталог без входа. Авторизация нужна для пользовательского доступа, возрастных ограничений и приватных состояний. Самый надежный запасной способ — вставить полный Cookie-заголовок из авторизованного браузера.",
+		"items": [
+			{
+				"type": "login",
+				"key": "login",
+				"notification": "cookies.changed",
+				"method": "web",
+				"url": "https://inkstory.net/",
+				"title": "Войти через WebView",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "manualCookies",
+				"title": "Cookies из браузера",
+				"subtitle": "DevTools → Network → запрос на inkstory.net или api.inkstory.net → заголовок Cookie → скопировать полностью.",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "authToken",
+				"title": "Access Token",
+				"subtitle": "Опционально. Подставляется в Authorization: Bearer для API InkStory.",
+				"default": "",
+				"keyboardType": 0,
+				"autocorrectionDisabled": true,
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Сеть",
+		"footer": "Меняйте адреса только если InkStory официально переедет на другой домен или API.",
+		"items": [
+			{
+				"type": "text",
+				"key": "baseUrl",
+				"title": "Веб-домен",
+				"placeholder": "https://inkstory.net",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://inkstory.net",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "text",
+				"key": "apiUrl",
+				"title": "API-домен",
+				"placeholder": "https://api.inkstory.net",
+				"keyboardType": 3,
+				"returnKeyType": 9,
+				"autocorrectionDisabled": true,
+				"default": "https://api.inkstory.net",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]

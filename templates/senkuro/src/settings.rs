@@ -4,11 +4,26 @@ use alloc::string::{String, ToString};
 const API_DOMAIN_KEY: &str = "apiDomain";
 const ENGLISH_TITLES_KEY: &str = "englishTitles";
 
-pub const DEFAULT_API_DOMAIN: &str = "https://api.senkuro.me";
+pub fn fallback_api_url(
+	current: &str,
+	default_domain: &str,
+	fallback_domain: &str,
+) -> String {
+	let base = if current.starts_with(default_domain) {
+		fallback_domain
+	} else {
+		default_domain
+	};
+	alloc::format!("{base}/graphql")
+}
 
-pub fn api_url() -> String {
-	let mut base =
-		defaults_get::<String>(API_DOMAIN_KEY).unwrap_or_else(|| DEFAULT_API_DOMAIN.to_string());
+pub fn api_url(default_domain: &str, fallback_domain: &str) -> String {
+	let mut base = defaults_get::<String>(API_DOMAIN_KEY)
+		.filter(|value| {
+			let value = value.trim_end_matches('/');
+			value == default_domain || value == fallback_domain
+		})
+		.unwrap_or_else(|| default_domain.to_string());
 	if base.ends_with('/') {
 		base.pop();
 	}

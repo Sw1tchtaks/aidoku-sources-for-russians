@@ -12,9 +12,15 @@ struct RuSenkuro;
 impl Config for RuSenkuro {
 	const SITE: &'static str = "Senkuro";
 	const BASE_URL: &'static str = "https://senkuro.com";
-	// Senkuro hides 18+ tags by default; mirror the keiyoushi extension.
-	const EXCLUDE_GENRES: &'static [&'static str] =
-		&["hentai", "yaoi", "yuri", "shoujo_ai", "shounen_ai", "lgbt"];
+	// Hide every currently active EXPLICIT child label outside Senkognito.
+	const EXCLUDE_GENRES: &'static [&'static str] = &[
+		"erotica",
+		"hentai",
+		"yaoi",
+		"yuri",
+		"shoujo_ai",
+		"shounen_ai",
+	];
 }
 
 register_source!(

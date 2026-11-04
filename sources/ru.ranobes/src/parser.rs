@@ -10,7 +10,8 @@ use alloc::vec::Vec;
 pub fn parse_tile(el: &Element) -> Option<Manga> {
 	let link = el
 		.select_first("h2.title a")
-		.or_else(|| el.select_first(".title a"))?;
+		.or_else(|| el.select_first(".title a"))
+		.or_else(|| el.select_first("a[href*='/ranobe/']"))?;
 	let href = link.attr("abs:href").or_else(|| link.attr("href"))?;
 	let title = link
 		.text()
@@ -23,6 +24,12 @@ pub fn parse_tile(el: &Element) -> Option<Manga> {
 		.and_then(|fig| fig.attr("style"))
 		.as_deref()
 		.and_then(extract_background_image)
+		.or_else(|| {
+			el.select_first(".poster figure")
+				.and_then(|fig| fig.attr("style"))
+				.as_deref()
+				.and_then(extract_background_image)
+		})
 		.or_else(|| {
 			el.select_first("img")
 				.and_then(|img| img.attr("abs:src").or_else(|| img.attr("src")))

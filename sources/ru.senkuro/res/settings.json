@@ -2,21 +2,22 @@
 	{
 		"type": "group",
 		"title": "Настройки",
+		"footer": "Публичный API предназначен для VPN и зарубежных сетей, региональный — для России. При сетевой ошибке источник автоматически повторяет запрос через второй адрес.",
 		"items": [
 			{
 				"type": "select",
 				"key": "apiDomain",
 				"title": "Домен API",
 				"values": [
-					"https://api.senkuro.me",
-					"https://api.senkuro.com"
+					"https://api.senkuro.com",
+					"https://api.senkuro.me"
 				],
 				"titles": [
-					"Россия (senkuro.me)",
-					"Публичный (senkuro.com)"
+					"VPN / вне России — senkuro.com",
+					"Россия — senkuro.me"
 				],
-				"default": "https://api.senkuro.me",
-				"refreshes": ["content"]
+				"default": "https://api.senkuro.com",
+				"refreshes": ["listings", "content"]
 			},
 			{
 				"type": "switch",

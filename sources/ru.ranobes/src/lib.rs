@@ -47,28 +47,45 @@ fn fetch_html(url: &str) -> Result<Document> {
 		.send()?;
 	let status = response.status_code();
 	let bytes = response.get_data()?;
-	if !(200..400).contains(&status) {
+	if !(200..300).contains(&status) {
 		return Err(error!("Ranobes HTTP {} for {}", status, url));
 	}
 	Html::parse_with_url(bytes, &base).map_err(|e| error!("Ranobes parse error: {:?}", e))
 }
 
+fn catalog_url(base: &str, page: i32) -> String {
+	if page <= 1 {
+		format!("{base}/ranobe/")
+	} else {
+		format!("{base}/ranobe/page/{page}/")
+	}
+}
+
 fn parse_listing(doc: &Document) -> MangaPageResult {
 	// Tile element is `<article class="block story shortstory ...">`. Use the
 	// tag-agnostic class selector so we also handle any future <div>-based theme.
-	let entries = doc
-		.select(".block.story.shortstory")
-		.map(|list| {
-			list.into_iter()
-				.filter_map(|el| parser::parse_tile(&el))
-				.collect::<Vec<_>>()
-		})
-		.unwrap_or_default();
+	let mut entries = parse_listing_with_selector(doc, ".block.story.shortstory");
+	if entries.is_empty() {
+		entries = parse_listing_with_selector(doc, ".shortstory");
+	}
+	if entries.is_empty() {
+		entries = parse_listing_with_selector(doc, "article");
+	}
 	let has_next_page = doc.select_first(".page_next a, a.page_next").is_some();
 	MangaPageResult {
 		entries,
 		has_next_page,
 	}
+}
+
+fn parse_listing_with_selector(doc: &Document, selector: &str) -> Vec<Manga> {
+	doc.select(selector)
+		.map(|list| {
+			list.into_iter()
+				.filter_map(|el| parser::parse_tile(&el))
+				.collect::<Vec<_>>()
+		})
+		.unwrap_or_default()
 }
 
 struct Ranobes;
@@ -93,7 +110,7 @@ impl Source for Ranobes {
 				encode_uri_component(q.as_str())
 			)
 		} else {
-			format!("{base}/ranobe/page/{page}/")
+			catalog_url(&base, page)
 		};
 		let doc = fetch_html(&url)?;
 		Ok(parse_listing(&doc))
@@ -188,7 +205,7 @@ impl Source for Ranobes {
 impl ListingProvider for Ranobes {
 	fn get_manga_list(&self, _listing: Listing, page: i32) -> Result<MangaPageResult> {
 		let base = base_url();
-		let url = format!("{base}/ranobe/page/{page}/");
+		let url = catalog_url(&base, page);
 		let doc = fetch_html(&url)?;
 		Ok(parse_listing(&doc))
 	}
@@ -197,7 +214,7 @@ impl ListingProvider for Ranobes {
 impl Home for Ranobes {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let base = base_url();
-		let url = format!("{base}/ranobe/page/1/");
+		let url = catalog_url(&base, 1);
 		// Ranobes is behind DDoS-Guard. The very first request from a fresh
 		// process often gets a 403 challenge; catalog tab works on retry once
 		// the user has any cached cookie. Don't propagate the failure as an

@@ -18,20 +18,36 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 use models::{
-	BookFull, CatalogEnvelope, ChapterPageProps, NextData, SITE_URL, merge_book_into, strip_html,
+	BookFull, CatalogEnvelope, ChapterPageProps, HomePageProps, NextData, SITE_URL,
+	merge_book_into, strip_html,
 };
 
 const PAGE_SIZE: usize = 30;
 
 fn fetch_text(url: &str) -> Result<Vec<u8>> {
-	let response = Request::get(url)?
-		.header(
-			"User-Agent",
-			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-		)
-		.header("Referer", SITE_URL)
-		.header("Accept-Language", "ru,en;q=0.9")
-		.send()?;
+	let mut response = None;
+	for attempt in 1..=3 {
+		match Request::get(url)?
+			.header(
+				"User-Agent",
+				"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+			)
+			.header("Referer", SITE_URL)
+			.header("Accept", "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8")
+			.header("Accept-Language", "ru,en;q=0.9")
+			.send()
+		{
+			Ok(r) => {
+				response = Some(r);
+				break;
+			}
+			Err(e) if attempt < 3 => {
+				println!("[ranoberf] request attempt {attempt} failed for {url}: {e:?}");
+			}
+			Err(e) => return Err(error!("Ранобэ.рф request failed: {e:?}")),
+		}
+	}
+	let response = response.ok_or_else(|| error!("Ранобэ.рф request failed"))?;
 	let status = response.status_code();
 	let bytes = response.get_data()?;
 	if !(200..300).contains(&status) {
@@ -40,6 +56,29 @@ fn fetch_text(url: &str) -> Result<Vec<u8>> {
 		return Err(error!("Ранобэ.рф HTTP {status}"));
 	}
 	Ok(bytes)
+}
+
+fn fetch_catalog(page: i32) -> Result<CatalogEnvelope> {
+	if page <= 1 {
+		let api_url = format!("{SITE_URL}/v3/book");
+		match fetch_json(&api_url) {
+			Ok(envelope) => return Ok(envelope),
+			Err(e) => {
+				println!("[ranoberf] /v3/book failed, falling back to homepage: {e:?}");
+			}
+		}
+	}
+
+	let url = if page <= 1 {
+		SITE_URL.to_string()
+	} else {
+		format!("{SITE_URL}/?page={page}")
+	};
+	let doc = fetch_html(&url)?;
+	let props: HomePageProps = extract_next_props(&doc)?;
+	props
+		.total_data
+		.ok_or_else(|| error!("Ранобэ.рф: totalData missing in home page props"))
 }
 
 fn fetch_json<T: DeserializeOwned>(url: &str) -> Result<T> {
@@ -94,8 +133,7 @@ impl Source for Ranoberf {
 		page: i32,
 		_filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
-		let url = format!("{SITE_URL}/v3/book");
-		let envelope: CatalogEnvelope = fetch_json(&url)?;
+		let envelope: CatalogEnvelope = fetch_catalog(page)?;
 		let mut items = envelope.items;
 
 		if let Some(q) = query.as_ref().map(|q| q.trim()).filter(|q| !q.is_empty()) {

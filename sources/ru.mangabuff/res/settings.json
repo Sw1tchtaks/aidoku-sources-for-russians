@@ -1,1 +1,41 @@
-[]
+[
+	{
+		"type": "group",
+		"title": "Домен",
+		"footer": "Основной домен лучше подходит для VPN и зарубежных сетей. Зеркала wss доступны прежде всего из России, а из-за рубежа часто отвечают HTTP 403 и могут загружаться медленнее.",
+		"items": [
+			{
+				"type": "select",
+				"key": "baseUrl",
+				"title": "Сайт",
+				"default": "https://mangabuff.ru",
+				"values": [
+					"https://mangabuff.ru",
+					"https://wss.mangabuff.ru",
+					"https://wss2.mangabuff.ru"
+				],
+				"titles": [
+					"Основной / VPN — mangabuff.ru",
+					"Россия, резерв — wss.mangabuff.ru",
+					"Россия, резерв 2 — wss2.mangabuff.ru"
+				],
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Обложки",
+		"footer": "Оригиналы заметно чётче, но могут весить около 1 МБ каждый. Экономичный режим использует миниатюры шириной 180 px.",
+		"items": [
+			{
+				"type": "switch",
+				"key": "highQualityCovers",
+				"title": "Высокое качество",
+				"subtitle": "Загружать оригинальные обложки с основного хоста",
+				"default": true,
+				"refreshes": ["listings", "content"]
+			}
+		]
+	}
+]

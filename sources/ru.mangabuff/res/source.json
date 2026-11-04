@@ -2,12 +2,17 @@
 	"info": {
 		"id": "ru.mangabuff",
 		"name": "MangaBuff",
-		"version": 1,
+		"version": 6,
 		"url": "https://mangabuff.ru",
 		"contentRating": 1,
 		"languages": ["ru"]
 	},
 	"listings": [
-		{"id": "popular", "name": "Каталог"}
+		{"id": "hot", "name": "Горячие новинки"},
+		{"id": "latest", "name": "Новое на сайте"},
+		{"id": "catalog", "name": "Каталог"},
+		{"id": "manga", "name": "Манга"},
+		{"id": "manhwa", "name": "Манхва"},
+		{"id": "manhua", "name": "Маньхуа"}
 	]
 }

@@ -2,6 +2,7 @@
 extern crate alloc;
 
 use aidoku::helpers::uri::encode_uri_component;
+use aidoku::imports::defaults::defaults_get;
 use aidoku::imports::html::{Document, Element, Html};
 use aidoku::imports::net::{Request, TimeUnit, set_rate_limit};
 use aidoku::prelude::*;
@@ -15,15 +16,43 @@ use aidoku::{
 use alloc::format;
 use alloc::string::ToString;
 
-const SITE_URL: &str = "https://mangabuff.ru";
+const DEFAULT_BASE_URL: &str = "https://mangabuff.ru";
+const SITE_ORIGINS: [&str; 3] = [
+	"https://mangabuff.ru",
+	"https://wss.mangabuff.ru",
+	"https://wss2.mangabuff.ru",
+];
+
+fn base_url() -> String {
+	let mut url = defaults_get::<String>("baseUrl")
+		.unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
+	while url.ends_with('/') {
+		url.pop();
+	}
+	url
+}
+
+fn high_quality_covers() -> bool {
+	defaults_get::<bool>("highQualityCovers").unwrap_or(true)
+}
+
+fn site_url(path: &str) -> String {
+	let base = base_url();
+	if path.starts_with('/') {
+		format!("{base}{path}")
+	} else {
+		format!("{base}/{path}")
+	}
+}
 
 fn fetch_html(url: &str) -> Result<Document> {
+	let base = base_url();
 	let response = Request::get(url)?
 		.header(
 			"User-Agent",
 			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
 		)
-		.header("Referer", SITE_URL)
+		.header("Referer", &base)
 		.header("Accept", "text/html,*/*;q=0.8")
 		.header("Accept-Language", "ru,en;q=0.9")
 		.send()?;
@@ -32,7 +61,7 @@ fn fetch_html(url: &str) -> Result<Document> {
 	if !(200..400).contains(&status) {
 		return Err(error!("MangaBuff HTTP {status} for {url}"));
 	}
-	Html::parse_with_url(bytes, SITE_URL).map_err(|e| error!("MangaBuff parse: {:?}", e))
+	Html::parse_with_url(bytes, &base).map_err(|e| error!("MangaBuff parse: {:?}", e))
 }
 
 /// Catalog tile = `<a class="cards__item" href="…/manga/{slug}">` with
@@ -51,7 +80,7 @@ fn parse_tile(el: &Element) -> Option<Manga> {
 		.and_then(|e| e.attr("style"))
 		.as_deref()
 		.and_then(extract_background_image)
-		.map(|u| absolutize(&u));
+		.map(|u| poster_url(&u));
 	let genres = el
 		.select_first("div.cards__info")
 		.and_then(|e| e.text())
@@ -62,14 +91,46 @@ fn parse_tile(el: &Element) -> Option<Manga> {
 			.filter(|s| !s.is_empty())
 			.collect::<Vec<_>>()
 	});
+	let rating = el
+		.select_first("span.cards__rating")
+		.and_then(|e| e.text())
+		.map(|s| s.trim().to_string())
+		.filter(|s| !s.is_empty());
+	let authors = card_subtitle(rating.as_deref(), tags.as_deref());
 	Some(Manga {
 		key,
 		title,
 		cover,
 		url: Some(absolutize(&href)),
 		tags,
+		authors,
 		..Default::default()
 	})
+}
+
+fn card_subtitle(rating: Option<&str>, tags: Option<&[String]>) -> Option<Vec<String>> {
+	let mut parts = Vec::new();
+	if let Some(value) = rating {
+		parts.push(format!("★ {value}"));
+	}
+	if let Some(values) = tags {
+		parts.extend(values.iter().take(2).cloned());
+	}
+	if parts.is_empty() {
+		None
+	} else {
+		Some(alloc::vec![parts.join(" • ")])
+	}
+}
+
+fn parse_tiles(el: &Element) -> Vec<Manga> {
+	el.select("a.cards__item")
+		.map(|list| {
+			list.into_iter()
+				.filter_map(|item| parse_tile(&item))
+				.collect::<Vec<_>>()
+		})
+		.unwrap_or_default()
 }
 
 fn parse_catalog(doc: &Document) -> MangaPageResult {
@@ -77,17 +138,12 @@ fn parse_catalog(doc: &Document) -> MangaPageResult {
 		.select("a.cards__item")
 		.map(|list| list.into_iter().filter_map(|el| parse_tile(&el)).collect::<Vec<_>>())
 		.unwrap_or_default();
-	// Pagination on /manga uses ?page=N. Detect "next page" link in the
-	// pagination block. Be permissive — if any link with rel=next or
-	// containing ?page=N+1 is present, assume there's more.
+	// MangaBuff marks the current pagination item, so the following item is
+	// the next page. This also avoids treating the last page as non-final.
 	let has_next_page = doc.select_first("a[rel=\"next\"]").is_some()
 		|| doc
-			.select(".pagination a")
-			.map(|list| {
-				list.into_iter()
-					.any(|a| a.attr("href").map(|h| h.contains("?page=")).unwrap_or(false))
-			})
-			.unwrap_or(false);
+			.select_first(".pagination__button--active + .pagination__button a")
+			.is_some();
 	MangaPageResult {
 		entries,
 		has_next_page,
@@ -104,14 +160,49 @@ fn url_to_key(url: &str) -> Option<String> {
 }
 
 fn absolutize(url: &str) -> String {
+	for origin in SITE_ORIGINS {
+		if url == origin {
+			return base_url();
+		}
+		if let Some(path) = url.strip_prefix(origin).filter(|path| path.starts_with('/')) {
+			return site_url(path);
+		}
+	}
+	if let Some(path) = url.strip_prefix("//mangabuff.ru") {
+		return site_url(path);
+	}
+	if let Some(path) = url.strip_prefix("//wss.mangabuff.ru") {
+		return site_url(path);
+	}
+	if let Some(path) = url.strip_prefix("//wss2.mangabuff.ru") {
+		return site_url(path);
+	}
 	if url.starts_with("http://") || url.starts_with("https://") {
 		url.to_string()
 	} else if let Some(p) = url.strip_prefix("//") {
 		format!("https://{p}")
 	} else if url.starts_with('/') {
-		format!("{SITE_URL}{url}")
+		site_url(url)
 	} else {
-		format!("{SITE_URL}/{url}")
+		site_url(url)
+	}
+}
+
+fn poster_url(url: &str) -> String {
+	let full_marker = "/img/manga/posters/";
+	let thumbnail_marker = "/x180/img/manga/posters/";
+	let path = if let Some(index) = url.find(thumbnail_marker) {
+		Some(&url[index + "/x180".len()..])
+	} else {
+		url.find(full_marker).map(|index| &url[index..])
+	};
+	let Some(path) = path else {
+		return absolutize(url);
+	};
+	if high_quality_covers() {
+		format!("{DEFAULT_BASE_URL}{path}")
+	} else {
+		site_url(&format!("/x180{path}"))
 	}
 }
 
@@ -141,8 +232,8 @@ fn fill_details(doc: &Document, manga: &mut Manga) {
 		.select_first("meta[property=\"og:image\"]")
 		.and_then(|e| e.attr("content"))
 		.filter(|s| !s.is_empty());
-	if cover.is_some() {
-		manga.cover = cover;
+	if let Some(cover) = cover {
+		manga.cover = Some(poster_url(&cover));
 	}
 	manga.description = doc
 		.select_first("meta[property=\"og:description\"]")
@@ -150,13 +241,17 @@ fn fill_details(doc: &Document, manga: &mut Manga) {
 		.and_then(|e| e.attr("content"))
 		.filter(|s| !s.is_empty());
 
-	let mut tags: Vec<String> = Vec::new();
-	if let Some(genres) = doc.select(".manga__genres a, .info__list-text a[href*='?genres=']") {
-		for g in genres {
-			if let Some(t) = g.text() {
-				let trimmed = t.trim();
-				if !trimmed.is_empty() {
-					tags.push(trimmed.to_string());
+	// The current MangaBuff layout keeps age rating, genres and descriptive
+	// tags together in `.manga__middle .tags`. Preserve the type/primary genre
+	// from the catalog tile, then append every unique detail tag. The page has
+	// duplicate desktop/mobile blocks, hence the explicit de-duplication.
+	let mut tags = manga.tags.clone().unwrap_or_default();
+	if let Some(detail_tags) = doc.select(".manga__middle .tags .tags__item") {
+		for tag in detail_tags {
+			if let Some(text) = tag.text() {
+				let value = text.trim();
+				if !value.is_empty() && !tags.iter().any(|existing| existing == value) {
+					tags.push(value.to_string());
 				}
 			}
 		}
@@ -257,11 +352,12 @@ impl Source for MangaBuff {
 	) -> Result<MangaPageResult> {
 		let url = if let Some(q) = query.as_ref().filter(|q| !q.trim().is_empty()) {
 			format!(
-				"{SITE_URL}/search?query={}&page={page}",
+				"{}/search?query={}&page={page}",
+				base_url(),
 				encode_uri_component(q.as_str())
 			)
 		} else {
-			format!("{SITE_URL}/manga?page={page}")
+			format!("{}/manga?page={page}", base_url())
 		};
 		let doc = fetch_html(&url)?;
 		Ok(parse_catalog(&doc))
@@ -277,7 +373,7 @@ impl Source for MangaBuff {
 		let mut updated = manga;
 
 		if needs_details || needs_chapters {
-			let url = format!("{SITE_URL}/manga/{slug}");
+			let url = site_url(&format!("/manga/{slug}"));
 			let doc = fetch_html(&url)?;
 			updated.url = Some(url);
 			if needs_details {
@@ -300,11 +396,7 @@ impl Source for MangaBuff {
 	}
 
 	fn get_page_list(&self, _manga: Manga, chapter: Chapter) -> Result<Vec<Page>> {
-		let url = if chapter.key.starts_with("http") {
-			chapter.key.clone()
-		} else {
-			absolutize(&chapter.key)
-		};
+		let url = absolutize(&chapter.key);
 		let doc = fetch_html(&url)?;
 		// Reader items lazy-load via <img data-src="https://c3.mangabuff.ru/...">.
 		let urls = doc
@@ -332,8 +424,28 @@ impl Source for MangaBuff {
 }
 
 impl ListingProvider for MangaBuff {
-	fn get_manga_list(&self, _listing: Listing, page: i32) -> Result<MangaPageResult> {
-		let url = format!("{SITE_URL}/manga?page={page}");
+	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
+		if matches!(listing.id.as_str(), "hot" | "latest") {
+			if page > 1 {
+				return Ok(MangaPageResult {
+					entries: Vec::new(),
+					has_next_page: false,
+				});
+			}
+			let doc = fetch_html(&base_url())?;
+			let index = if listing.id == "hot" { 1 } else { 2 };
+			return Ok(MangaPageResult {
+				entries: parse_home_section(&doc, index),
+				has_next_page: false,
+			});
+		}
+		let path = match listing.id.as_str() {
+			"manga" => "/types/manga",
+			"manhwa" => "/types/manxva",
+			"manhua" => "/types/manxya",
+			_ => "/manga",
+		};
+		let url = format!("{}{path}?page={page}", base_url());
 		let doc = fetch_html(&url)?;
 		Ok(parse_catalog(&doc))
 	}
@@ -341,30 +453,62 @@ impl ListingProvider for MangaBuff {
 
 impl Home for MangaBuff {
 	fn get_home(&self) -> Result<HomeLayout> {
-		let doc = fetch_html(&format!("{SITE_URL}/manga"))?;
-		let entries = parse_catalog(&doc).entries;
-		let big_entries: Vec<Manga> = entries.iter().take(5).cloned().collect();
-		let scroller_entries: Vec<Link> = entries.into_iter().skip(5).map(Link::from).collect();
+		let doc = fetch_html(&base_url())?;
+		let popular = parse_home_section(&doc, 0);
+		let mut hot = parse_home_section(&doc, 1);
+		let mut latest = parse_home_section(&doc, 2);
+
+		let mut featured: Vec<Manga> = popular.iter().take(3).cloned().collect();
+		enrich_entries(&mut featured, 3);
+		// MangaBuff exposes only type + primary genre in home-card HTML. Fetch
+		// details for the six rows Aidoku actually renders in each MangaList so
+		// those cards carry the complete tag set without enriching all 20 items.
+		enrich_entries(&mut hot, 6);
+		enrich_entries(&mut latest, 6);
+
+		let manga = home_catalog("/types/manga").unwrap_or_default();
+		let manhwa = home_catalog("/types/manxva").unwrap_or_default();
+		let manhua = home_catalog("/types/manxya").unwrap_or_default();
+
 		Ok(HomeLayout {
 			components: alloc::vec![
 				HomeComponent {
 					title: Some("Популярное".to_string()),
-					subtitle: None,
+					subtitle: Some("Сейчас на MangaBuff".to_string()),
 					value: HomeComponentValue::BigScroller {
-						entries: big_entries,
+						entries: featured,
 						auto_scroll_interval: Some(8.0),
 					},
 				},
 				HomeComponent {
-					title: Some("Каталог".to_string()),
-					subtitle: None,
+					title: Some("Горячие новинки".to_string()),
+					subtitle: Some("Рейтинг, тип и жанр".to_string()),
+					value: HomeComponentValue::MangaList {
+						ranking: false,
+						page_size: Some(6),
+						entries: hot.into_iter().take(6).map(Link::from).collect(),
+						listing: Some(listing("hot", "Горячие новинки")),
+					},
+				},
+				HomeComponent {
+					title: Some("Новое на сайте".to_string()),
+					subtitle: Some("Недавно добавленные тайтлы".to_string()),
+					value: HomeComponentValue::MangaList {
+						ranking: false,
+						page_size: Some(6),
+						entries: latest.into_iter().take(6).map(Link::from).collect(),
+						listing: Some(listing("latest", "Новое на сайте")),
+					},
+				},
+				catalog_scroller("Манга", "Японские тайтлы", manga, "manga"),
+				catalog_scroller("Манхва", "Корейские тайтлы", manhwa, "manhwa"),
+				catalog_scroller("Маньхуа", "Китайские тайтлы", manhua, "manhua"),
+				HomeComponent {
+					title: Some("Весь каталог".to_string()),
+					subtitle: Some("Все доступные тайтлы".to_string()),
 					value: HomeComponentValue::Scroller {
-						entries: scroller_entries,
-						listing: Some(Listing {
-							id: "popular".to_string(),
-							name: "Каталог".to_string(),
-							kind: ListingKind::Default,
-						}),
+						entries: popular.into_iter().skip(3).map(Link::from).collect(),
+						listing: Some(listing("catalog", "Каталог")),
 					},
 				},
 			],
@@ -372,14 +516,59 @@ impl Home for MangaBuff {
 	}
 }
 
+fn enrich_entries(entries: &mut [Manga], limit: usize) {
+	for manga in entries.iter_mut().take(limit) {
+		if let Ok(details) = fetch_html(&site_url(&format!("/manga/{}", manga.key))) {
+			fill_details(&details, manga);
+		}
+	}
+}
+
+fn parse_home_section(doc: &Document, index: usize) -> Vec<Manga> {
+	doc.select("div.cards.owl-carousel")
+		.and_then(|list| list.into_iter().nth(index))
+		.map(|section| parse_tiles(&section))
+		.unwrap_or_default()
+}
+
+fn home_catalog(path: &str) -> Result<Vec<Manga>> {
+	let doc = fetch_html(&site_url(path))?;
+	Ok(parse_catalog(&doc).entries.into_iter().take(12).collect())
+}
+
+fn listing(id: &str, name: &str) -> Listing {
+	Listing {
+		id: id.to_string(),
+		name: name.to_string(),
+		kind: ListingKind::Default,
+	}
+}
+
+fn catalog_scroller(
+	title: &str,
+	subtitle: &str,
+	entries: Vec<Manga>,
+	listing_id: &str,
+) -> HomeComponent {
+	HomeComponent {
+		title: Some(title.to_string()),
+		subtitle: Some(subtitle.to_string()),
+		value: HomeComponentValue::Scroller {
+			entries: entries.into_iter().map(Link::from).collect(),
+			listing: Some(listing(listing_id, title)),
+		},
+	}
+}
+
 impl ImageRequestProvider for MangaBuff {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
+		let base = base_url();
 		Ok(Request::get(url)?
 			.header(
 				"User-Agent",
 				"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
 			)
-			.header("Referer", SITE_URL))
+			.header("Referer", &base))
 	}
 }
 

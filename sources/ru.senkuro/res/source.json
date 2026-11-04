@@ -2,13 +2,18 @@
 	"info": {
 		"id": "ru.senkuro",
 		"name": "Senkuro",
-		"version": 6,
+		"version": 16,
 		"url": "https://senkuro.com",
 		"contentRating": 1,
 		"languages": ["ru"]
 	},
 	"listings": [
-		{"id": "popular", "name": "Популярное"},
+		{"id": "popular", "name": "Самое читаемое"},
+		{"id": "top_week", "name": "За неделю"},
+		{"id": "top_month", "name": "За месяц"},
+		{"id": "latest_updates", "name": "Обновления"},
+		{"id": "latest_titles", "name": "Новинки"},
+		{"id": "top_manhwa", "name": "Топ манхв"},
 		{"id": "manga", "name": "Манга"},
 		{"id": "manhwa", "name": "Манхва"},
 		{"id": "manhua", "name": "Маньхуа"},

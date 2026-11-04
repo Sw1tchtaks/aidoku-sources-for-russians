@@ -13,6 +13,13 @@ pub struct CatalogEnvelope {
 	pub items: Vec<CatalogItem>,
 }
 
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HomePageProps {
+	#[serde(default)]
+	pub total_data: Option<CatalogEnvelope>,
+}
+
 #[derive(Deserialize)]
 pub struct CatalogItem {
 	pub id: i64,
@@ -28,6 +35,8 @@ pub struct CatalogItem {
 	pub likes: Option<i64>,
 	#[serde(default)]
 	pub dislikes: Option<i64>,
+	#[serde(default)]
+	pub vertical_image: Option<ImageRef>,
 }
 
 impl CatalogItem {
@@ -44,6 +53,10 @@ impl CatalogItem {
 		Manga {
 			key: self.slug.clone(),
 			title: self.title,
+			cover: self
+				.vertical_image
+				.and_then(|image| image.url)
+				.map(|url| absolutize(&url)),
 			url: Some(absolutize(&url)),
 			status: parse_status(self.status.as_deref()),
 			..Default::default()
@@ -282,74 +295,67 @@ impl ChapterPageDto {
 
 pub fn strip_html(html: &str) -> String {
 	let mut out = String::with_capacity(html.len());
-	let mut in_tag = false;
-	let mut tag_buf = String::new();
 	let mut skip_until_close: Option<String> = None;
-	let bytes = html.as_bytes();
-	let mut i = 0;
-	while i < bytes.len() {
-		let c = match core::str::from_utf8(&bytes[i..]) {
-			Ok(_) => bytes[i] as char,
-			Err(_) => {
-				i += 1;
-				continue;
-			}
-		};
+	let mut chars = html.chars();
+
+	while let Some(c) = chars.next() {
 		if let Some(close) = skip_until_close.as_ref() {
 			if c == '<' {
-				let candidate = format!("</{}>", close);
-				if html[i..].to_lowercase().starts_with(&candidate) {
-					i += candidate.len();
+				let tag = read_tag(&mut chars);
+				let lower = tag.to_lowercase();
+				if lower.trim_start().starts_with(&format!("/{close}")) {
 					skip_until_close = None;
-					continue;
 				}
 			}
-			i += 1;
 			continue;
 		}
-		if in_tag {
-			if c == '>' {
-				in_tag = false;
-				let raw = tag_buf.clone();
-				let lower = raw.to_lowercase();
-				let lower = lower.trim();
-				let tag_name: String = lower
-					.chars()
-					.take_while(|c| c.is_ascii_alphanumeric())
-					.collect();
-				if tag_name == "p" || tag_name == "br" || tag_name == "div" {
-					if !out.ends_with("\n\n") {
-						if !out.ends_with('\n') {
-							out.push('\n');
-						}
-						out.push('\n');
-					}
-				} else if tag_name == "script" || tag_name == "style" {
-					if !lower.starts_with('/') {
-						skip_until_close = Some(tag_name);
-					}
-				} else if lower.starts_with("div") && lower.contains("messageblock") {
-					skip_until_close = Some("div".to_string());
-				}
-				tag_buf.clear();
-				i += 1;
-				continue;
-			}
-			tag_buf.push(c);
-			i += 1;
-			continue;
-		}
+
 		if c == '<' {
-			in_tag = true;
-			tag_buf.clear();
-			i += 1;
+			let tag = read_tag(&mut chars);
+			let lower = tag.to_lowercase();
+			let lower = lower.trim();
+			let is_closing = lower.starts_with('/');
+			let tag_name: String = lower
+				.trim_start_matches('/')
+				.chars()
+				.take_while(|c| c.is_ascii_alphanumeric())
+				.collect();
+			if !is_closing && (tag_name == "p" || tag_name == "br" || tag_name == "div") {
+				push_paragraph_break(&mut out);
+			}
+			if !is_closing && (tag_name == "script" || tag_name == "style") {
+				skip_until_close = Some(tag_name);
+			} else if !is_closing && tag_name == "div" && lower.contains("messageblock") {
+				skip_until_close = Some("div".to_string());
+			}
 			continue;
 		}
+
 		out.push(c);
-		i += 1;
 	}
+
 	let out = decode_entities(&out);
 	collapse_newlines(&out).trim().to_string()
+}
+
+fn read_tag(chars: &mut core::str::Chars<'_>) -> String {
+	let mut tag = String::new();
+	for c in chars.by_ref() {
+		if c == '>' {
+			break;
+		}
+		tag.push(c);
+	}
+	tag
+}
+
+fn push_paragraph_break(out: &mut String) {
+	if !out.ends_with("\n\n") {
+		if !out.ends_with('\n') {
+			out.push('\n');
+		}
+		out.push('\n');
+	}
 }
 
 fn decode_entities(s: &str) -> String {

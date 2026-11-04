@@ -1,0 +1,21 @@
+{
+	"info": {
+		"id": "ru.inkstory",
+		"name": "InkStory",
+		"version": 2,
+		"url": "https://inkstory.net",
+		"contentRating": 1,
+		"languages": ["ru"]
+	},
+	"listings": [
+		{"id": "popular_day", "name": "За день"},
+		{"id": "popular_week", "name": "За неделю"},
+		{"id": "popular_month", "name": "За месяц"},
+		{"id": "popular_all", "name": "За всё время"},
+		{"id": "latest_updates", "name": "Обновления"},
+		{"id": "latest_titles", "name": "Новинки"},
+		{"id": "manga", "name": "Манга"},
+		{"id": "manhwa", "name": "Манхва"},
+		{"id": "manhua", "name": "Маньхуа"}
+	]
+}

@@ -1,105 +1,64 @@
 # Aidoku Sources for Russians
 
-Источники для [Aidoku](https://aidoku.app) (iOS/iPadOS, версия 0.7+) для русскоязычных сайтов с мангой, манхвой и ранобэ.
+[![Добавить в Aidoku](https://img.shields.io/badge/%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B2-Aidoku-ff2d55?style=for-the-badge)](https://sw1tchtaks.github.io/aidoku-sources-for-russians/)
 
-## Использование
+Русскоязычные источники для [Aidoku](https://aidoku.app) на iPhone и iPad.
 
-В приложении Aidoku → Settings → Source Lists → Add Source List → вставьте URL:
+## Установка
 
-```
+Нажмите кнопку выше или добавьте список вручную: `Настройки` → `Список источников` → `+`.
+
+```text
 https://sw1tchtaks.github.io/aidoku-sources-for-russians/index.min.json
 ```
 
-После этого источники появятся в списке доступных и их можно установить.
-
-> Aidoku кеширует индекс на стороне приложения и иногда системно через iOS URLSession. Если после моего пуша новые источники не появляются — удалите URL из Source Lists, форс-закройте Aidoku (свайп вверх в переключателе задач) и добавьте URL заново.
+После установки списка выберите и установите нужные источники в Aidoku. Новые версии публикуются по тому же адресу автоматически.
 
 ## Источники
 
 | Источник | Сайт | Версия | Статус | Содержимое |
-|----------|------|:---:|--------|------------|
-| [Senkuro](sources/ru.senkuro/) | https://senkuro.com | v6 | работает | манга, манхва, маньхуа, комиксы |
-| [ReadManga](sources/ru.readmanga/) | https://readmanga.live | v3 | beta · web-login + token | манга (Grouple) |
-| [MangaBuff](sources/ru.mangabuff/) | https://mangabuff.ru | v1 | beta | манга, манхва |
-| [Ranobes](sources/ru.ranobes/) | https://ranobes.com | v5 | beta | ранобэ (текст + иллюстрации) |
-| [RanobeHub](sources/ru.ranobehub/) | https://ranobehub.org | v2 | beta | ранобэ (текст) |
-| [Ранобэ.рф](sources/ru.ranoberf/) | https://ранобэ.рф | v2 | beta | ранобэ (текст) |
+| --- | --- | :---: | --- | --- |
+| [AllHentai](sources/ru.allhentai/) | [20.allhen.online](https://20.allhen.online) | v7 | beta, вход через WebView | манга 18+ |
+| [Senkuro](sources/ru.senkuro/) | [senkuro.com](https://senkuro.com) | v16 | работает | манга, манхва, маньхуа, комиксы |
+| [Senkognito](sources/ru.senkognito/) | [senkognito.com](https://senkognito.com) | v15 | работает | отдельный хентай-каталог Senkognito |
+| [ReadManga](sources/ru.readmanga/) | [a.zazaza.me](https://a.zazaza.me) | v8 | beta, вход через WebView | манга |
+| [InkStory](sources/ru.inkstory/) | [inkstory.net](https://inkstory.net) | v2 | beta, вход через WebView | манга, манхва, маньхуа |
+| [MangaBuff](sources/ru.mangabuff/) | [mangabuff.ru](https://mangabuff.ru) | v6 | beta | манга, манхва, маньхуа |
+| [Ranobes](sources/ru.ranobes/) | [ranobes.com](https://ranobes.com) | v7 | ограничен Cloudflare | ранобэ |
+| [RanobeHub](sources/ru.ranobehub/) | [ranobehub.org](https://ranobehub.org) | v2 | beta | ранобэ |
+| [Ранобэ.рф](sources/ru.ranoberf/) | [ранобэ.рф](https://ранобэ.рф) | v4 | beta | ранобэ |
 
-**Beta** означает, что источник собирается и устанавливается, но полевая обкатка ещё не закончена. Если что-то не работает — заведите [issue](https://github.com/Sw1tchtaks/aidoku-sources-for-russians/issues).
+## Россия и VPN
 
-### Возможности по семействам
+Проверено 3 августа 2026 года через два узла в России, а также узлы в Германии и США. Проверялись рабочие страницы каталога или API, а не только DNS.
 
-- **Senkuro** — общий GraphQL-движок (`templates/senkuro`):
-  - Главная-вид: большая карусель «Популярное» + ленты по типу контента (Манга / Манхва / Маньхуа / Комиксы)
-  - Динамические фильтры жанров (~1100 меток, подгружаются с API при первом открытии каталога) сгруппированы по разделам Демография / Темы / Сеттинг / Черты / Элементы
-  - Статические фильтры тип / формат / статус / статус перевода / возрастной рейтинг
-  - Каталог через `mangas(first, after, …)` Relay-style; пагинация cursor-based, кэшируется в defaults
-  - Веб-логин не реализован: API анонимный, для бесплатных тайтлов работает без аккаунта
-- **Grouple-семейство** (ReadManga) — общий HTML-парсер (`templates/grouple`):
-  - Каталог + поиск
-  - Современный (`.cr-*`) и легаси (`.expandable`) layout карточек
-  - Извлечение страниц чтения из `rm_h.readerInit(...)` JS-массива
-  - Зеркало настраивается в Settings источника
-  - **Web-login** через webview (на ReadManga настроен `https://a.zazaza.me/internal/auth`). После успешного входа все cookies сохраняются и подставляются в `Cookie:` заголовок на каждом запросе — открываются тайтлы с возрастными ограничениями и за регистрацию.
-- **MangaBuff** — отдельный HTML-парсер:
-  - Каталог `/manga?page=N` (30/страницу), тайл `a.cards__item`, обложка из CSS background-image
-  - Главы парсятся со страницы тайтла, читалка тащит lazy-load URL'ы из `div.reader__item img[data-src]` (CDN `c3.mangabuff.ru`)
-  - Авторизации нет — главы 18+/подписка-only недоступны
-- **Ранобэ-источники** (Ranobes / RanobeHub / Ранобэ.рф) — все возвращают главы как `PageContent::Text(markdown)` для вертикального тексто-ридера:
-  - **Ranobes** — DLE-сайт за DDoS-Guard, HTML-скрейпинг. Список глав ограничен 10 страницами (≈250 глав) чтобы не провоцировать 403. Картиночные главы (иллюстрации) рендерятся как отдельные image-Pages перед текстом. Home-вид fault-tolerant: если первый запрос ловит 403, источник всё равно покажет шаблон с кнопкой «Каталог» вместо вечного skeleton.
-  - **RanobeHub** — чистый JSON REST API на `/api/{search,ranobe/{id},ranobe/{id}/contents,chapter/{id}}`, страницы поиска по 12 элементов с настоящей пагинацией.
-  - **Ранобэ.рф** — Next.js SPA. Каталог через `/v3/book` тащит сразу все 800 книг (~1.1 МБ), пагинация на стороне приложения. Карточка и текст глав — парсинг `__NEXT_DATA__` JSON. Без обложек в каталоге (cover URL содержит per-book upload-id, доступный только на странице книги).
-  - У всех — Home-вид как у Senkuro/MangaLib: большая карусель «Популярное» + горизонтальная лента «Каталог».
+| Источник | Россия | Вне России / VPN | Что выбрать |
+| --- | --- | --- | --- |
+| AllHentai | `20.allhen.online` | тот же домен | менять адрес вручную только при официальном переезде |
+| Senkuro | `api.senkuro.me` | `api.senkuro.com` | источник автоматически пробует оба API |
+| Senkognito | `api.senkognito.com`, резерв `api.senkuro.com` | те же адреса | отдельного рабочего `.me` API нет; оба адреса используют `App-Id` Senkognito |
+| ReadManga | `a.zazaza.me` | `a.zazaza.me` или `readmanga.me` | старые `readmanga.live` и `readmanga.ru` удалены как нерабочие |
+| InkStory | `inkstory.net` + `api.inkstory.net` | те же домены | региональное зеркало не требуется |
+| MangaBuff | `mangabuff.ru`, резервные `wss` | `mangabuff.ru` | `wss` извне часто возвращают `403` и работают медленнее |
+| Ranobes | `ranobes.com` | тот же домен | сайт доступен, но Cloudflare может показать проверку вместо каталога |
+| RanobeHub | `ranobehub.org` | тот же домен | региональное зеркало не требуется |
+| Ранобэ.рф | `ранобэ.рф` | тот же домен | региональное зеркало не требуется |
 
-## Что есть в официальном репозитории
-
-Эти источники не дублируем — берите из [aidoku-community/sources](https://github.com/Aidoku-Community/sources):
-
-- **MangaLib** (`ru.mangalib`)
-- **HentaiLib** (`ru.hentailib`)
-- **Desu** (`ru.desu`)
-- **RanobeLib** (`ru.ranobelib`) — для ранобэ через LibGroup
-- **SlashLib** (`ru.slashlib`)
+Результат может отличаться у конкретного провайдера или VPN. Выбор домена и авторизация находятся в настройках соответствующего источника.
 
 ## Разработка
 
-Каждый источник — Rust-крейт под `wasm32-unknown-unknown` через [aidoku-rs](https://github.com/Aidoku/aidoku-rs). Логика, общая для нескольких сайтов одного движка, вынесена в `templates/<engine>`:
-
-- `templates/senkuro` — GraphQL-движок Senkuro
-- `templates/grouple` — HTML-парсер ReadManga-family с поддержкой web-login
-
-Сборка автоматическая в CI (`.github/workflows/build.yaml`) при пуше в `main` или `templates/**`:
-
-1. `aidoku package` собирает `.aix` для каждого источника в `sources/`
-2. `aidoku build` агрегирует их в `index.min.json`
-3. Результат деплоится в ветку `gh-pages` и публикуется через GitHub Pages
-
-Локально:
+Исходники находятся в `sources/<id>`, общий код — в `templates/`. Пакеты собираются через [aidoku-rs](https://github.com/Aidoku/aidoku-rs).
 
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo install --git https://github.com/Aidoku/aidoku-rs aidoku-cli
-cd sources/ru.senkuro && aidoku package
+cd sources/ru.senkuro
+aidoku package
 ```
 
-## Структура репозитория
-
-```
-.
-├── templates/             # переиспользуемые движки (path-зависимости)
-│   ├── senkuro/           # GraphQL Senkuro
-│   └── grouple/           # HTML ReadManga-family
-└── sources/               # сами источники, каждый собирается в .aix
-    ├── ru.senkuro/
-    ├── ru.readmanga/
-    ├── ru.mangabuff/
-    ├── ru.ranobes/
-    ├── ru.ranobehub/
-    └── ru.ranoberf/
-```
+Пуш в `main` запускает GitHub Actions, обновляет `.aix`, индекс источников и GitHub Pages.
 
 ## Лицензия
 
-MIT. См. [LICENSE](./LICENSE).
-
-Этот репозиторий не аффилирован ни с владельцами сайтов-источников, ни с приложением Aidoku.
+MIT. Репозиторий не связан с владельцами сайтов или разработчиками Aidoku.

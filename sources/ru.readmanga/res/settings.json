@@ -2,18 +2,8 @@
 	{
 		"type": "group",
 		"title": "Аккаунт",
-		"footer": "Три способа входа, в порядке надёжности: (1) скопируйте Cookie из вашего залогиненного браузера в поле «Cookies из браузера» — самый железный путь, обходит проблемы с WebView и OAuth; (2) WebView-вход — может не сработать, если включён Google-логин (Google блокирует embedded WebView) или если страница закрывается слишком быстро; (3) JWT-токен с https://3.grouple.co/private/settings/token — задумывался Grouple для сторонних API, для HTML-страниц иногда не принимается.",
+		"footer": "Для ReadManga оставлен только WebView-вход. Ручные Cookies и Auth Token скрыты и больше не используются источником, потому что для этого сайта они не дают стабильной авторизации.",
 		"items": [
-			{
-				"type": "text",
-				"key": "manualCookies",
-				"title": "Cookies из браузера",
-				"subtitle": "DevTools → Network → любой запрос на a.zazaza.me → заголовок Cookie → скопировать полностью и вставить сюда. Формат: name=value; name=value; …",
-				"default": "",
-				"keyboardType": 0,
-				"autocorrectionDisabled": true,
-				"refreshes": ["listings", "content"]
-			},
 			{
 				"type": "login",
 				"key": "login",
@@ -22,33 +12,27 @@
 				"url": "https://a.zazaza.me/internal/auth",
 				"title": "Войти через WebView",
 				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "text",
-				"key": "authToken",
-				"title": "Auth Token (опционально)",
-				"subtitle": "JWT с https://3.grouple.co/private/settings/token. Подставляется в Authorization: Bearer.",
-				"default": "",
-				"keyboardType": 0,
-				"autocorrectionDisabled": true,
-				"refreshes": ["listings", "content"]
 			}
 		]
 	},
 	{
 		"type": "group",
-		"title": "Настройки",
-		"footer": "Зеркало надо менять, когда основное возвращает 5xx или CAPTCHA. Список рабочих доменов смотрите на форуме Grouple.",
+		"title": "Домен",
+		"footer": "a.zazaza.me работает без VPN и доступен также из зарубежных сетей. readmanga.me — дополнительный адрес для VPN: из России он может не отвечать.",
 		"items": [
 			{
-				"type": "text",
+				"type": "select",
 				"key": "baseUrl",
-				"title": "Веб-домен",
-				"placeholder": "https://a.zazaza.me",
-				"keyboardType": 3,
-				"returnKeyType": 9,
-				"autocorrectionDisabled": true,
+				"title": "Сайт",
 				"default": "https://a.zazaza.me",
+				"values": [
+					"https://a.zazaza.me",
+					"https://readmanga.me"
+				],
+				"titles": [
+					"Россия / универсальный — a.zazaza.me",
+					"VPN / вне России — readmanga.me"
+				],
 				"refreshes": ["listings", "content"]
 			}
 		]

@@ -2,21 +2,22 @@
 	{
 		"type": "group",
 		"title": "Настройки",
+		"footer": "Оба адреса используют отдельный каталог Senkognito. При сетевой ошибке источник автоматически повторяет запрос через второй API.",
 		"items": [
 			{
 				"type": "select",
 				"key": "apiDomain",
 				"title": "Домен API",
 				"values": [
-					"https://api.senkuro.me",
+					"https://api.senkognito.com",
 					"https://api.senkuro.com"
 				],
 				"titles": [
-					"Россия (senkuro.me)",
-					"Публичный (senkuro.com)"
+					"Основной — senkognito.com",
+					"Резервный — senkuro.com"
 				],
-				"default": "https://api.senkuro.me",
-				"refreshes": ["content"]
+				"default": "https://api.senkognito.com",
+				"refreshes": ["listings", "content"]
 			},
 			{
 				"type": "switch",
